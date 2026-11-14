@@ -51,7 +51,10 @@ The custom colour picker uses hue, saturation and brightness with a live preview
 - [OpenRazer](https://openrazer.github.io/) installed with `openrazer-daemon` running and
   your user in the `openrazer` group.
 - Rust 1.90 or newer, with `cargo`.
-- PipeWire or PulseAudio for the Audio lighting effect (`parec`, `pactl`).
+- Build dependencies for GPUI:
+  - Arch: `base-devel clang pkgconf wayland libxkbcommon vulkan-icd-loader vulkan-headers fontconfig freetype2`
+  - Debian/Ubuntu: `build-essential clang pkg-config libwayland-dev libxkbcommon-dev libvulkan-dev libfontconfig1-dev libfreetype6-dev libx11-dev libxcb1-dev`
+- PipeWire or PulseAudio for the Audio lighting effect (`parec`, `pactl`). On Debian/Ubuntu install `pulseaudio-utils`; on Arch `libpulse` provides `parec`.
 - For onboard profiles: access to the mouse's raw HID node (udev rule below).
 - For macros: read access to Razer input devices and access to `/dev/uinput`.
 
