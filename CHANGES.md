@@ -22,7 +22,9 @@ Razer Synapse-inspired dark interface.
   from Settings. Backups remain compatible with Snake's JSON format.
 - Performance page with onboard DPI stages and live DPI/polling-rate controls.
 - Lighting page with overall and per-zone brightness, hardware effects, effect colours,
-  speed/direction controls and a custom HSV colour picker.
+  speed/direction controls and a custom HSV colour picker. Logos, scroll wheels, side
+  strips and backlights use OpenRazer's prefixed zone methods (`setLogoStatic`,
+  `setScrollSpectrum`, ...), so the same page works across devices.
 - Software spectrum, breath and audio-reactive effects for static-only devices. Audio
   capture uses PipeWire/PulseAudio through `parec`; the default source follows what is
   playing.

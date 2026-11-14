@@ -6,8 +6,9 @@ and to the mouse's own memory over raw HID.
 
 This is a fork of [Snake by Brett Smith](https://github.com/bithatch/snake), continuing
 the work of [ScoobyDouche/snake](https://github.com/ScoobyDouche/snake), reimplemented as
-a native Rust application. It targets OpenRazer 3.12 and a Razer Naga Trinity, and is
-designed to work with anything OpenRazer supports.
+a native Rust application. It targets OpenRazer 3.12 and a Razer Naga Trinity for the
+onboard-profile path. Lighting, sensor and battery controls follow each device's OpenRazer
+interfaces, so other supported devices work to the extent the daemon exposes those controls.
 
 ![Devices page](images/page-devices.png)
 
@@ -51,6 +52,26 @@ The custom colour picker uses hue, saturation and brightness with a live preview
 The tray icon uses the StatusNotifierItem protocol and offers page shortcuts and Quit:
 
 ![Tray icon in the desktop panel](images/tray.png)
+
+## Device support
+
+OpenRazer is the source of truth. Rusted Snake lists every device returned by
+`org.razer.getDevices` and builds its controls from the interfaces and methods found by
+introspection. Coverage therefore depends on the device and driver:
+
+| Feature | Coverage |
+| --- | --- |
+| Device list, name, firmware, serial, battery | Any device where OpenRazer exposes `razer.device.misc` / `razer.device.power` |
+| Brightness and lighting | `chroma`, `logo`, `scroll`, `left`, `right`, `backlight` and legacy `bw2013` zones. Per-zone method prefixes (`setLogoStatic`, `setScrollSpectrum`, ...) are handled. Effects appear only when the daemon exposes the setter |
+| DPI and polling rate | Devices exposing `razer.device.dpi` / `razer.device.misc` poll-rate methods. Polling choices are fixed at 125, 500, 1000, 2000, 4000 and 8000 Hz |
+| Onboard buttons and profiles | Raw HID. Verified on the Naga Trinity (1532:0067); other Razer mice are probed read-only and need Experimental saving for writes. Keyboards' onboard profiles are not handled |
+| Macros | Any Razer evdev keyboard or mouse; the trigger editor lists Naga side buttons plus arbitrary key capture. Broadly tested only with a mouse |
+| Audio-reactive lighting | Devices with at least one static-capable lighting zone; colours apply per zone, not per key |
+
+OpenRazer's `razer.device.binding` and `razer.device.macro` interfaces are not used, so
+keyboard button remapping and OpenRazer's own macro recording are not part of this rewrite.
+Devices that OpenRazer does not support (for example some Razer audio products) do not
+appear at all.
 
 ## Requirements
 

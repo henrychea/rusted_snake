@@ -187,15 +187,21 @@ impl OpenRazer {
         }
 
         for (interface, block) in lighting_interfaces(&xml) {
-            let Some(zone_name) = zone_name(&interface) else {
+            let Some((zone_name, prefix)) = zone_spec(&interface) else {
                 continue;
             };
-            let supported = effects(&block);
+            let supported = effects(&interface, &block);
             if supported.is_empty() {
                 continue;
             }
             let brightness = self
-                .try_call::<_, (f64,)>(&path, &interface, "getBrightness", ())
+                .try_call::<_, (f64,)>(
+                    &path,
+                    &interface,
+                    &prefixed(prefix, "get", "Brightness"),
+                    (),
+                )
+                .or_else(|| self.try_call::<_, (f64,)>(&path, &interface, "getBrightness", ()))
                 .map(|(value,)| value.clamp(0.0, 100.0));
             let current_effect = self
                 .try_call::<_, (String,)>(&path, &interface, "getEffect", ())
@@ -260,10 +266,11 @@ impl OpenRazer {
 
     pub fn set_zone_brightness(&self, device: &str, zone: &ZoneId, value: f64) -> Result<()> {
         let path = Self::device_path(device);
+        let prefix = zone_prefix(&zone.interface);
         self.call_void(
             path.as_str(),
             zone.interface.as_str(),
-            "setBrightness",
+            &prefixed(prefix, "set", "Brightness"),
             (value.clamp(0.0, 100.0),),
         )
     }
@@ -291,6 +298,7 @@ impl OpenRazer {
     pub fn set_zone_effect(&self, device: &str, zone: &ZoneId, effect: &ZoneEffect) -> Result<()> {
         let path = Self::device_path(device);
         let interface = zone.interface.as_str();
+        let prefix = zone_prefix(interface);
         let color = |index: usize| -> (u8, u8, u8) {
             let rgb = effect
                 .colors
@@ -303,41 +311,92 @@ impl OpenRazer {
         let (r1, g1, b1) = color(0);
         let (r2, g2, b2) = color(1);
         let speed = effect.speed;
+
+        // Some zones (logo, scroll wheel, backlight, side strips) hide their
+        // lighting behind an active flag. Turn it on before setting an effect.
+        if effect.kind != EffectKind::Off && !prefix.is_empty() {
+            let _ = self.try_call_void(
+                path.as_str(),
+                interface,
+                &prefixed(prefix, "set", "Active"),
+                (true,),
+            );
+        }
+
         match effect.kind {
             EffectKind::Off => {
-                self.call_void(path.as_str(), interface, "setNone", ())?;
+                self.call_void(
+                    path.as_str(),
+                    interface,
+                    &prefixed(prefix, "set", "None"),
+                    (),
+                )?;
             }
             EffectKind::Static => {
-                self.call_void(path.as_str(), interface, "setStatic", (r1, g1, b1))?;
+                if interface.ends_with("bw2013") {
+                    self.call_void(path.as_str(), interface, "setStatic", ())?;
+                } else {
+                    self.call_void(
+                        path.as_str(),
+                        interface,
+                        &prefixed(prefix, "set", "Static"),
+                        (r1, g1, b1),
+                    )?;
+                }
             }
             EffectKind::Spectrum => {
-                self.call_void(path.as_str(), interface, "setSpectrum", ())?;
+                self.call_void(
+                    path.as_str(),
+                    interface,
+                    &prefixed(prefix, "set", "Spectrum"),
+                    (),
+                )?;
             }
             EffectKind::BreathSingle => {
-                self.call_void(path.as_str(), interface, "setBreathSingle", (r1, g1, b1))?;
+                self.call_void(
+                    path.as_str(),
+                    interface,
+                    &prefixed(prefix, "set", "BreathSingle"),
+                    (r1, g1, b1),
+                )?;
             }
             EffectKind::BreathDual => {
                 self.call_void(
                     path.as_str(),
                     interface,
-                    "setBreathDual",
+                    &prefixed(prefix, "set", "BreathDual"),
                     (r1, g1, b1, r2, g2, b2),
                 )?;
             }
             EffectKind::BreathRandom => {
-                self.call_void(path.as_str(), interface, "setBreathRandom", ())?;
+                self.call_void(
+                    path.as_str(),
+                    interface,
+                    &prefixed(prefix, "set", "BreathRandom"),
+                    (),
+                )?;
             }
             EffectKind::Reactive => {
-                self.call_void(path.as_str(), interface, "setReactive", (r1, g1, b1, speed))?;
+                self.call_void(
+                    path.as_str(),
+                    interface,
+                    &prefixed(prefix, "set", "Reactive"),
+                    (r1, g1, b1, speed),
+                )?;
             }
             EffectKind::Wave => {
-                self.call_void(path.as_str(), interface, "setWave", (effect.direction,))?;
+                self.call_void(
+                    path.as_str(),
+                    interface,
+                    &prefixed(prefix, "set", "Wave"),
+                    (effect.direction,),
+                )?;
             }
             EffectKind::StarlightSingle => {
                 self.call_void(
                     path.as_str(),
                     interface,
-                    "setStarlightSingle",
+                    &prefixed(prefix, "set", "StarlightSingle"),
                     (r1, g1, b1, speed),
                 )?;
             }
@@ -345,15 +404,25 @@ impl OpenRazer {
                 self.call_void(
                     path.as_str(),
                     interface,
-                    "setStarlightDual",
+                    &prefixed(prefix, "set", "StarlightDual"),
                     (r1, g1, b1, r2, g2, b2, speed),
                 )?;
             }
             EffectKind::StarlightRandom => {
-                self.call_void(path.as_str(), interface, "setStarlightRandom", (speed,))?;
+                self.call_void(
+                    path.as_str(),
+                    interface,
+                    &prefixed(prefix, "set", "StarlightRandom"),
+                    (speed,),
+                )?;
             }
             EffectKind::Pulsate => {
-                self.call_void(path.as_str(), interface, "setPulsate", ())?;
+                self.call_void(
+                    path.as_str(),
+                    interface,
+                    &prefixed(prefix, "set", "Pulsate"),
+                    (),
+                )?;
             }
             EffectKind::Ripple => {
                 let refreshed = speed.max(1) as f64;
@@ -468,43 +537,66 @@ fn block_has(block: &str, method: &str) -> bool {
     block.contains(&format!("<method name=\"{method}\""))
 }
 
-fn effects(block: &str) -> Vec<EffectKind> {
+fn effects(interface: &str, block: &str) -> Vec<EffectKind> {
+    let prefix = zone_prefix(interface);
+    let bw2013 = interface.ends_with("bw2013");
     let mut effects = Vec::new();
     let mut add = |kind: EffectKind, present: bool| {
         if present {
             effects.push(kind);
         }
     };
-    add(EffectKind::Off, block_has(block, "setNone"));
-    add(EffectKind::Static, block_has(block, "setStatic"));
-    add(EffectKind::Spectrum, block_has(block, "setSpectrum"));
+    add(
+        EffectKind::Off,
+        block_has(block, &prefixed(prefix, "set", "None")),
+    );
+    add(
+        EffectKind::Static,
+        block_has(block, &prefixed(prefix, "set", "Static")),
+    );
+    add(
+        EffectKind::Spectrum,
+        block_has(block, &prefixed(prefix, "set", "Spectrum")),
+    );
     add(
         EffectKind::BreathSingle,
-        block_has(block, "setBreathSingle"),
+        block_has(block, &prefixed(prefix, "set", "BreathSingle")),
     );
-    add(EffectKind::BreathDual, block_has(block, "setBreathDual"));
+    add(
+        EffectKind::BreathDual,
+        block_has(block, &prefixed(prefix, "set", "BreathDual")),
+    );
     add(
         EffectKind::BreathRandom,
-        block_has(block, "setBreathRandom"),
+        block_has(block, &prefixed(prefix, "set", "BreathRandom")),
     );
-    add(EffectKind::Reactive, block_has(block, "setReactive"));
-    add(EffectKind::Wave, block_has(block, "setWave"));
+    add(
+        EffectKind::Reactive,
+        block_has(block, &prefixed(prefix, "set", "Reactive")),
+    );
+    add(
+        EffectKind::Wave,
+        block_has(block, &prefixed(prefix, "set", "Wave")),
+    );
     add(
         EffectKind::StarlightSingle,
-        block_has(block, "setStarlightSingle"),
+        block_has(block, &prefixed(prefix, "set", "StarlightSingle")),
     );
     add(
         EffectKind::StarlightDual,
-        block_has(block, "setStarlightDual"),
+        block_has(block, &prefixed(prefix, "set", "StarlightDual")),
     );
     add(
         EffectKind::StarlightRandom,
-        block_has(block, "setStarlightRandom"),
+        block_has(block, &prefixed(prefix, "set", "StarlightRandom")),
     );
-    add(EffectKind::Pulsate, block_has(block, "setPulsate"));
+    add(
+        EffectKind::Pulsate,
+        block_has(block, &prefixed(prefix, "set", "Pulsate")),
+    );
     add(
         EffectKind::Ripple,
-        block_has(block, "setRipple") || block_has(block, "setRippleRandomColour"),
+        !bw2013 && block_has(block, "setRipple") || block_has(block, "setRippleRandomColour"),
     );
     add(
         EffectKind::RippleRandom,
@@ -513,22 +605,28 @@ fn effects(block: &str) -> Vec<EffectKind> {
     effects
 }
 
-fn zone_name(interface: &str) -> Option<String> {
+fn zone_spec(interface: &str) -> Option<(&'static str, &'static str)> {
     let suffix = interface.strip_prefix("razer.device.lighting.")?;
-    let name = match suffix {
-        "chroma" => "Main lighting",
-        "logo" => "Logo",
-        "scroll" => "Scroll wheel",
-        "left" => "Left side",
-        "right" => "Right side",
-        "backlight" => "Backlight",
-        "profile_led" => "Profile LEDs",
-        "custom" => return None,
-        "bw2013" => "Lighting",
-        "spectrum" => "Spectrum",
+    Some(match suffix {
+        "chroma" => ("Main lighting", ""),
+        "logo" => ("Logo", "Logo"),
+        "scroll" => ("Scroll wheel", "Scroll"),
+        "left" => ("Left side", "Left"),
+        "right" => ("Right side", "Right"),
+        "backlight" => ("Backlight", "Backlight"),
+        "profile_led" => ("Profile LEDs", "Profile"),
+        "bw2013" => ("Lighting", ""),
+        "spectrum" => ("Spectrum", ""),
         _ => return None,
-    };
-    Some(name.to_string())
+    })
+}
+
+fn zone_prefix(interface: &str) -> &'static str {
+    zone_spec(interface).map(|(_, prefix)| prefix).unwrap_or("")
+}
+
+fn prefixed(prefix: &str, verb: &str, action: &str) -> String {
+    format!("{verb}{prefix}{action}")
 }
 
 fn prettify(id: &str) -> String {
@@ -569,14 +667,38 @@ mod tests {
         let zones = lighting_interfaces(XML);
         assert_eq!(zones.len(), 1);
         assert_eq!(zones[0].0, "razer.device.lighting.chroma");
-        assert_eq!(zone_name(&zones[0].0).as_deref(), Some("Main lighting"));
-        let effects = effects(&zones[0].1);
+        assert_eq!(zone_spec(&zones[0].0), Some(("Main lighting", "")));
+        let supported = effects(&zones[0].0, &zones[0].1);
         assert_eq!(
-            effects,
+            supported,
             vec![EffectKind::Off, EffectKind::Static, EffectKind::Spectrum]
         );
         assert!(has_interface(XML, "razer.device.misc"));
         assert!(!has_interface(XML, "razer.device.dpi"));
+    }
+
+    #[test]
+    fn prefixed_zone_methods_are_discovered() {
+        let block = r#"
+        <method name="setLogoStatic"><arg direction="in" type="y"/></method>
+        <method name="setLogoNone"/>
+        <method name="setLogoBreathSingle"/>
+        <method name="getLogoBrightness"><arg direction="out" type="d"/></method>
+        "#;
+        let supported = effects("razer.device.lighting.logo", block);
+        assert_eq!(
+            supported,
+            vec![
+                EffectKind::Off,
+                EffectKind::Static,
+                EffectKind::BreathSingle
+            ]
+        );
+        assert_eq!(
+            zone_spec("razer.device.lighting.logo"),
+            Some(("Logo", "Logo"))
+        );
+        assert_eq!(prefixed("Logo", "set", "Static"), "setLogoStatic");
     }
 
     #[test]
