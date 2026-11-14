@@ -16,6 +16,7 @@ use crate::audio::{self, AudioSource, LevelMeter};
 use crate::macros::{EngineStatus, MacroEngine};
 use crate::onboard::{Session, known_caps};
 use crate::openrazer::OpenRazer;
+use crate::openrgb::{self, OpenRgbApply, OpenRgbDevice};
 
 #[derive(Debug)]
 pub enum Command {
@@ -81,6 +82,8 @@ pub enum Command {
     ListBackups,
     RefreshAudioSources,
     ReloadMacros(Vec<MacroDef>),
+    ListOpenRgbDevices,
+    ApplyOpenRgb(OpenRgbApply),
     Shutdown,
 }
 
@@ -118,6 +121,10 @@ pub enum Event {
     SoftwareEffect {
         device: String,
         active: Option<SoftwareEffect>,
+    },
+    OpenRgbDevices {
+        devices: Vec<OpenRgbDevice>,
+        error: Option<String>,
     },
 }
 
@@ -428,6 +435,20 @@ impl Backend {
             Command::ReloadMacros(macros) => {
                 self.macro_engine.reload(macros);
                 self.emit_macro_status();
+            }
+            Command::ListOpenRgbDevices => match openrgb::list_devices() {
+                Ok(devices) => self.send_event(Event::OpenRgbDevices {
+                    devices,
+                    error: None,
+                }),
+                Err(error) => self.send_event(Event::OpenRgbDevices {
+                    devices: Vec::new(),
+                    error: Some(error.to_string()),
+                }),
+            },
+            Command::ApplyOpenRgb(change) => {
+                let result = openrgb::apply(&change);
+                self.report(result, "OpenRGB lighting updated.".into());
             }
             Command::Shutdown => {}
         }

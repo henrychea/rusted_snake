@@ -35,6 +35,8 @@ Razer Synapse-inspired dark interface.
   instructions, OpenRazer diagnostics and the about panel.
 - StatusNotifierItem tray icon with Show, page shortcuts and Quit. Closing to tray works on
   X11; on Wayland closing quits because GPUI cannot restore minimized windows.
+- Tabbed lighting sources: OpenRazer and an OpenRGB tab driven by the `openrgb` command,
+  with OpenRGB modes, zones, colours, brightness and speed for devices OpenRazer misses.
 - `bin/rusted-snake` launcher that builds on first run, fast-forwards from git when clean,
   and starts the release binary.
 - Ship udev rules for raw HID and uinput access, a desktop entry, and app icons.

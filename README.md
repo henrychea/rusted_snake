@@ -28,6 +28,10 @@ interfaces, so other supported devices work to the extent the daemon exposes tho
 - **Lighting.** Overall and per-zone brightness, static colours, spectrum, breath,
   reactive, wave, starlight, pulsate, ripple and the other effects your device exposes.
   A custom HSV colour picker and quick swatches are included.
+- **OpenRGB tab.** Switch the Lighting page between OpenRazer and OpenRGB. The OpenRGB
+  view lists motherboards, RAM, speakers and Razer devices that OpenRazer does not manage,
+  with modes, zones, colours, brightness and speed. It uses the `openrgb` command, so no
+  extra library is linked.
 - **Software effects.** Spectrum, breath and audio-reactive effects for devices that only
   accept static colours. Audio follows your choice of PipeWire/PulseAudio source; the
   default follows what is playing.
@@ -53,6 +57,10 @@ The tray icon uses the StatusNotifierItem protocol and offers page shortcuts and
 
 ![Tray icon in the desktop panel](images/tray.png)
 
+OpenRGB lighting for devices OpenRazer does not manage:
+
+![OpenRGB lighting tab](images/page-lighting-openrgb.png)
+
 ## Device support
 
 OpenRazer is the source of truth. Rusted Snake lists every device returned by
@@ -67,17 +75,19 @@ introspection. Coverage therefore depends on the device and driver:
 | Onboard buttons and profiles | Raw HID. Verified on the Naga Trinity (1532:0067); other Razer mice are probed read-only and need Experimental saving for writes. Keyboards' onboard profiles are not handled |
 | Macros | Any Razer evdev keyboard or mouse; the trigger editor lists Naga side buttons plus arbitrary key capture. Broadly tested only with a mouse |
 | Audio-reactive lighting | Devices with at least one static-capable lighting zone; colours apply per zone, not per key |
+| OpenRGB lighting tab | Any controller the `openrgb` command lists, including non-Razer hardware; modes, zones, colours, brightness and speed only |
 
 OpenRazer's `razer.device.binding` and `razer.device.macro` interfaces are not used, so
 keyboard button remapping and OpenRazer's own macro recording are not part of this rewrite.
 Devices that OpenRazer does not support (for example some Razer audio products) do not
 appear at all.
 
-OpenRGB is a separate stack. It has its own drivers and can list motherboards, DRAM and
-Razer products that OpenRazer does not manage. Rusted Snake talks only to OpenRazer, so
-those OpenRGB entries will not appear here. Check `openrazer-daemon` logs and
-`org.razer.supportedDevices` if a Razer device is missing; non-Razer devices such as ASUS
-motherboards are intentionally out of scope.
+OpenRGB is a separate stack with its own drivers. Rusted Snake's **Lighting → OpenRGB** tab
+uses the `openrgb` command to expose OpenRGB devices that OpenRazer does not manage, including
+motherboards, DRAM and Razer devices missing from `openrazer-daemon`. OpenRGB control is
+limited to lighting: device discovery, onboard profiles, DPI, polling rate and macros still
+come from OpenRazer. If a Razer device is missing from both, check `openrazer-daemon` logs,
+`org.razer.supportedDevices`, and OpenRGB's own device support.
 
 ## Requirements
 
@@ -89,6 +99,8 @@ motherboards are intentionally out of scope.
   - Arch: `base-devel clang pkgconf wayland libxkbcommon vulkan-icd-loader vulkan-headers fontconfig freetype2`
   - Debian/Ubuntu: `build-essential clang pkg-config libwayland-dev libxkbcommon-dev libvulkan-dev libfontconfig1-dev libfreetype6-dev libx11-dev libxcb1-dev`
 - PipeWire or PulseAudio for the Audio lighting effect (`parec`, `pactl`). On Debian/Ubuntu install `pulseaudio-utils`; on Arch `libpulse` provides `parec`.
+- Optional: [OpenRGB](https://openrgb.org/) for the OpenRGB lighting tab. The `openrgb`
+  command must be on `PATH`.
 - For onboard profiles: access to the mouse's raw HID node (udev rule below).
 - For macros: read access to Razer input devices and access to `/dev/uinput`.
 
@@ -211,6 +223,9 @@ grab Razer input devices with evdev and inject through a uinput virtual keyboard
   macros stop when the app quits.
 - The audio effect applies colours to lighting zones. It does not draw a per-key matrix
   animation on keyboards.
+- The OpenRGB tab is a command-line bridge, not an SDK client. It applies static controls
+  rather than the live software effects available in the OpenRazer tab, and the `openrgb`
+  command adds roughly a second of latency per change.
 - Per-app macro lists and macro recording, which earlier Snake versions had, are not part
   of this rewrite.
 - The in-app updater is replaced by the launcher's git fast-forward. Updates are not

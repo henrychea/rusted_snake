@@ -9,7 +9,8 @@ use gpui::{
     KeyDownEvent, MouseButton, SharedString, Window, div, px,
 };
 use rusted_snake_backend::{
-    AudioSource, BackendHandle, BackendInfo, BackupEntry, Command, EngineState, EngineStatus, Event,
+    AudioSource, BackendHandle, BackendInfo, BackupEntry, Command, EngineState, EngineStatus,
+    Event, OpenRgbApply, OpenRgbDevice,
 };
 use rusted_snake_core::effect::{SoftwareEffect, SoftwareEffectSettings};
 use rusted_snake_core::macros::{MacroAction, MacroDef, MacroLibrary, RepeatMode};
@@ -219,6 +220,7 @@ pub enum ColorTarget {
     Onboard(u8, usize),
     SoftwareColor(usize),
     AudioColor(usize),
+    OpenRgb,
 }
 
 #[derive(Clone)]
@@ -235,12 +237,29 @@ impl ColorPickerUi {
     }
 }
 
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
+pub enum LightingSource {
+    #[default]
+    OpenRazer,
+    OpenRgb,
+}
+
 #[derive(Default)]
 pub struct LightingUi {
+    pub source: LightingSource,
     pub brightness: Option<f64>,
     pub zone_brightness: HashMap<String, f64>,
     pub zones: HashMap<String, ZoneDraft>,
     pub picker: Option<ColorPickerUi>,
+    pub openrgb_devices: Vec<OpenRgbDevice>,
+    pub openrgb_selected: Option<usize>,
+    pub openrgb_loading: bool,
+    pub openrgb_error: Option<String>,
+    pub openrgb_mode: Option<String>,
+    pub openrgb_zone: Option<usize>,
+    pub openrgb_color: Rgb,
+    pub openrgb_brightness: f32,
+    pub openrgb_speed: f32,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -470,13 +489,20 @@ impl Root {
         let _ = self.settings.save();
         self.onboard = OnboardUi::default();
         self.performance = PerformanceUi::default();
-        self.lighting = LightingUi::default();
+        self.reset_lighting_device_state();
         self.page = Page::Buttons;
         self.request_onboard();
         if let Some(device) = self.devices.iter().find(|device| device.id == id).cloned() {
             self.init_device_ui(&device);
         }
         cx.notify();
+    }
+
+    fn reset_lighting_device_state(&mut self) {
+        self.lighting.brightness = None;
+        self.lighting.zone_brightness.clear();
+        self.lighting.zones.clear();
+        self.lighting.picker = None;
     }
 
     fn init_device_ui(&mut self, device: &DeviceSnapshot) {
@@ -578,7 +604,7 @@ impl Root {
                         preferred.or_else(|| self.devices.first().map(|device| device.id.clone()));
                     self.onboard = OnboardUi::default();
                     self.performance = PerformanceUi::default();
-                    self.lighting = LightingUi::default();
+                    self.reset_lighting_device_state();
                     if let Some(device) = self.current_device().cloned() {
                         self.init_device_ui(&device);
                         self.request_onboard();
@@ -645,6 +671,44 @@ impl Root {
                     self.software_active.insert(device, effect);
                 } else {
                     self.software_active.remove(&device);
+                }
+            }
+            Event::OpenRgbDevices { devices, error } => {
+                self.lighting.openrgb_loading = false;
+                self.lighting.openrgb_error = error;
+                let previous = self.lighting.openrgb_selected;
+                self.lighting.openrgb_devices = devices;
+                let selected = previous
+                    .filter(|index| {
+                        self.lighting
+                            .openrgb_devices
+                            .iter()
+                            .any(|device| device.index == *index)
+                    })
+                    .or_else(|| {
+                        let wanted = self
+                            .current_device()
+                            .map(|device| device.display_name.to_ascii_lowercase());
+                        wanted.and_then(|wanted| {
+                            self.lighting
+                                .openrgb_devices
+                                .iter()
+                                .find(|device| {
+                                    let name = device.name.to_ascii_lowercase();
+                                    !wanted.is_empty()
+                                        && (name.contains(&wanted) || wanted.contains(&name))
+                                })
+                                .map(|device| device.index)
+                        })
+                    })
+                    .or_else(|| {
+                        self.lighting
+                            .openrgb_devices
+                            .first()
+                            .map(|device| device.index)
+                    });
+                if selected != previous {
+                    self.select_openrgb_device(selected, cx);
                 }
             }
         }
@@ -1199,6 +1263,10 @@ impl Root {
                 let settings = self.settings.software.clone();
                 self.apply_software_effect(settings, cx);
             }
+            ColorTarget::OpenRgb => {
+                self.lighting.openrgb_color = color;
+                self.apply_openrgb(cx);
+            }
         }
         self.lighting.picker = None;
         cx.notify();
@@ -1396,6 +1464,84 @@ impl Root {
             });
         })
         .detach();
+        cx.notify();
+    }
+
+    pub fn open_lighting_source(&mut self, source: LightingSource, cx: &mut Context<Self>) {
+        self.lighting.source = source;
+        if source == LightingSource::OpenRgb && self.lighting.openrgb_devices.is_empty() {
+            self.refresh_openrgb(cx);
+        }
+        cx.notify();
+    }
+
+    pub fn refresh_openrgb(&mut self, cx: &mut Context<Self>) {
+        self.lighting.openrgb_loading = true;
+        self.lighting.openrgb_error = None;
+        self.backend.send(Command::ListOpenRgbDevices);
+        cx.notify();
+    }
+
+    pub fn select_openrgb_device(&mut self, index: Option<usize>, cx: &mut Context<Self>) {
+        self.lighting.openrgb_selected = index;
+        self.lighting.openrgb_zone = None;
+        self.lighting.openrgb_color = Rgb::RAZER_GREEN;
+        self.lighting.openrgb_brightness = 100.0;
+        self.lighting.openrgb_speed = 50.0;
+        self.lighting.openrgb_mode = index
+            .and_then(|index| {
+                self.lighting
+                    .openrgb_devices
+                    .iter()
+                    .find(|device| device.index == index)
+            })
+            .and_then(|device| {
+                device
+                    .modes
+                    .iter()
+                    .find(|mode| mode.eq_ignore_ascii_case("static"))
+                    .or_else(|| {
+                        device
+                            .modes
+                            .iter()
+                            .find(|mode| mode.eq_ignore_ascii_case("direct"))
+                    })
+                    .or_else(|| device.modes.first())
+                    .cloned()
+            });
+        cx.notify();
+    }
+
+    pub fn set_openrgb_mode(&mut self, mode: String, cx: &mut Context<Self>) {
+        self.lighting.openrgb_mode = Some(mode);
+        self.apply_openrgb(cx);
+    }
+
+    pub fn set_openrgb_zone(&mut self, zone: Option<usize>, cx: &mut Context<Self>) {
+        self.lighting.openrgb_zone = zone;
+        self.apply_openrgb(cx);
+    }
+
+    pub fn apply_openrgb(&mut self, cx: &mut Context<Self>) {
+        let Some(selected) = self.lighting.openrgb_selected else {
+            return;
+        };
+        let Some(device) = self
+            .lighting
+            .openrgb_devices
+            .iter()
+            .find(|device| device.index == selected)
+        else {
+            return;
+        };
+        self.backend.send(Command::ApplyOpenRgb(OpenRgbApply {
+            device: device.index,
+            zone: self.lighting.openrgb_zone,
+            mode: self.lighting.openrgb_mode.clone(),
+            color: self.lighting.openrgb_color,
+            brightness: Some(self.lighting.openrgb_brightness.round().clamp(0.0, 100.0) as u8),
+            speed: Some(self.lighting.openrgb_speed.round().clamp(0.0, 100.0) as u8),
+        }));
         cx.notify();
     }
 

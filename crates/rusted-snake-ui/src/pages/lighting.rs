@@ -1,10 +1,11 @@
 use gpui::prelude::*;
-use gpui::{AnyElement, Context, FontWeight, Window, div, px};
+use gpui::{AnyElement, Context, Div, FontWeight, Window, div, px};
 
-use crate::app::{ColorTarget, Root};
+use crate::app::{ColorTarget, LightingSource, Root};
 use crate::theme;
 use crate::widgets;
 use crate::widgets::OnPress;
+use rusted_snake_backend::OpenRgbDevice;
 use rusted_snake_core::effect::{SoftwareEffect, SoftwareEffectSettings};
 use rusted_snake_core::{EffectKind, OnboardLighting, Rgb};
 
@@ -23,16 +24,6 @@ impl Root {
         _window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        let Some(device) = self.current_device().cloned() else {
-            return div()
-                .p(px(28.))
-                .child(widgets::empty_state(
-                    "icons/lighting.svg",
-                    "No device selected",
-                    "Pick a Razer device on the Devices page to light it up.",
-                ))
-                .into_any_element();
-        };
         let mut page = div()
             .flex()
             .flex_col()
@@ -45,7 +36,20 @@ impl Root {
                 "Lighting",
                 "Colours, effects and brightness for every zone.",
                 "icons/lighting.svg",
-            ));
+            ))
+            .child(self.lighting_tabs(cx));
+        if self.lighting.source == LightingSource::OpenRgb {
+            return page.child(self.openrgb_lighting(cx)).into_any_element();
+        }
+        let Some(device) = self.current_device().cloned() else {
+            return page
+                .child(widgets::empty_state(
+                    "icons/lighting.svg",
+                    "No device selected",
+                    "Pick a Razer device on the Devices page to light it up, or use the OpenRGB tab.",
+                ))
+                .into_any_element();
+        };
 
         if let Some(brightness) = device.brightness.or(self.lighting.brightness) {
             let preview = self.lighting.brightness.unwrap_or(brightness);
@@ -397,6 +401,363 @@ impl Root {
         page = page.child(self.software_effects_card(&device, cx));
         page = page.child(self.onboard_lighting_card(cx));
         page.into_any_element()
+    }
+
+    fn lighting_tabs(&self, cx: &mut Context<Self>) -> Div {
+        let mut bar = div()
+            .flex()
+            .items_center()
+            .gap_1()
+            .p(px(4.))
+            .rounded(px(11.))
+            .bg(theme::chrome())
+            .border_1()
+            .border_color(theme::border());
+        for (source, label) in [
+            (LightingSource::OpenRazer, "OPENRAZER"),
+            (LightingSource::OpenRgb, "OPENRGB"),
+        ] {
+            let active = self.lighting.source == source;
+            bar = bar.child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_2()
+                    .h(px(34.))
+                    .px(px(18.))
+                    .rounded(px(8.))
+                    .bg(if active {
+                        theme::surface_raised()
+                    } else {
+                        gpui::transparent_black()
+                    })
+                    .border_1()
+                    .border_color(if active {
+                        theme::border()
+                    } else {
+                        gpui::transparent_black()
+                    })
+                    .text_size(px(11.5))
+                    .font_weight(FontWeight::SEMIBOLD)
+                    .text_color(if active {
+                        theme::accent()
+                    } else {
+                        theme::muted()
+                    })
+                    .cursor_pointer()
+                    .hover(|style| style.bg(theme::surface()).text_color(theme::text()))
+                    .on_press(cx.listener(move |this, _, _, cx| {
+                        this.open_lighting_source(source, cx);
+                    }))
+                    .child(widgets::dot(if active {
+                        theme::accent()
+                    } else {
+                        theme::dim()
+                    }))
+                    .child(label),
+            );
+        }
+        bar
+    }
+
+    fn openrgb_lighting(&mut self, cx: &mut Context<Self>) -> AnyElement {
+        let mut body = div().flex().flex_col().gap_5().w_full();
+        let header = div()
+            .flex()
+            .items_start()
+            .justify_between()
+            .w_full()
+            .child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap_1()
+                    .child(widgets::heading("OpenRGB devices"))
+                    .child(widgets::hint(
+                        "OpenRGB covers devices OpenRazer does not manage, including motherboards, RAM and some Razer gear. Changes use the openrgb command.",
+                    )),
+            )
+            .child(
+                widgets::ghost_button("Refresh").on_press(cx.listener(|this, _, _, cx| {
+                    this.refresh_openrgb(cx);
+                })),
+            );
+        body = body.child(header);
+
+        if self.lighting.openrgb_loading {
+            return body
+                .child(
+                    widgets::card_padded()
+                        .items_center()
+                        .gap_3()
+                        .child(widgets::icon("icons/refresh.svg", 18.0, theme::accent()))
+                        .child(widgets::hint("Asking OpenRGB for devices...")),
+                )
+                .into_any_element();
+        }
+        if let Some(error) = &self.lighting.openrgb_error {
+            return body
+                .child(
+                    widgets::card_padded()
+                        .gap_3()
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .gap_2()
+                                .child(widgets::icon("icons/alert.svg", 16.0, theme::warning()))
+                                .child(widgets::heading("OpenRGB is not available")),
+                        )
+                        .child(widgets::hint(error.clone()))
+                        .child(widgets::hint(
+                            "Install OpenRGB and make sure the openrgb command can see your hardware. This tab uses the command line rather than linking OpenRGB.",
+                        )),
+                )
+                .into_any_element();
+        }
+        if self.lighting.openrgb_devices.is_empty() {
+            return body
+                .child(widgets::empty_state(
+                    "icons/lighting.svg",
+                    "No OpenRGB devices",
+                    "OpenRGB returned no lighting controllers. Check that OpenRGB can see your hardware, then refresh.",
+                ))
+                .into_any_element();
+        }
+
+        let mut cards = div().flex().flex_wrap().gap_3().w_full();
+        for device in self.lighting.openrgb_devices.clone() {
+            let selected = self.lighting.openrgb_selected == Some(device.index);
+            let index = device.index;
+            cards = cards.child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap_2()
+                    .w(px(258.))
+                    .p(px(14.))
+                    .rounded(px(11.))
+                    .bg(if selected {
+                        theme::surface_raised()
+                    } else {
+                        theme::surface()
+                    })
+                    .border_1()
+                    .border_color(if selected {
+                        theme::accent_soft(0.5)
+                    } else {
+                        theme::border()
+                    })
+                    .cursor_pointer()
+                    .hover(|style| {
+                        style
+                            .bg(theme::surface_raised())
+                            .border_color(theme::border_strong())
+                    })
+                    .on_press(cx.listener(move |this, _, _, cx| {
+                        this.select_openrgb_device(Some(index), cx);
+                    }))
+                    .child(
+                        div()
+                            .text_size(px(12.5))
+                            .font_weight(FontWeight::SEMIBOLD)
+                            .text_color(theme::text())
+                            .child(device.name.clone()),
+                    )
+                    .child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .gap_2()
+                            .child(widgets::pill(device.kind.clone(), theme::muted()))
+                            .child(
+                                div()
+                                    .text_size(px(10.))
+                                    .text_color(theme::dim())
+                                    .child(format!("#{}", device.index)),
+                            ),
+                    )
+                    .child(widgets::hint(device.description.clone())),
+            );
+        }
+        body = body.child(cards);
+
+        let Some(device) = self.openrgb_selected_device().cloned() else {
+            return body
+                .child(widgets::hint("Choose an OpenRGB device."))
+                .into_any_element();
+        };
+        let mut mode_chips = div().flex().flex_wrap().gap_2();
+        for mode in &device.modes {
+            let selected = self.lighting.openrgb_mode.as_deref() == Some(mode.as_str());
+            let mode = mode.clone();
+            mode_chips =
+                mode_chips.child(widgets::accent_segment(mode.clone(), selected).on_press(
+                    cx.listener(move |this, _, _, cx| {
+                        this.set_openrgb_mode(mode.clone(), cx);
+                    }),
+                ));
+        }
+        let mut zone_chips = div().flex().flex_wrap().gap_2();
+        zone_chips = zone_chips.child(
+            widgets::segment("All zones", self.lighting.openrgb_zone.is_none())
+                .on_press(cx.listener(|this, _, _, cx| this.set_openrgb_zone(None, cx))),
+        );
+        for (index, zone) in device.zones.iter().enumerate() {
+            let selected = self.lighting.openrgb_zone == Some(index);
+            let name = zone.clone();
+            zone_chips = zone_chips.child(widgets::segment(name, selected).on_press(
+                cx.listener(move |this, _, _, cx| this.set_openrgb_zone(Some(index), cx)),
+            ));
+        }
+        let mut colours = div().flex().items_center().gap_2().flex_wrap();
+        colours = colours.child(widgets::color_preview(self.lighting.openrgb_color).size(px(28.)));
+        for preset in PRESETS {
+            let selected = self.lighting.openrgb_color.distance(preset) < 6.0;
+            colours = colours.child(widgets::swatch(preset, selected).on_press(cx.listener(
+                move |this, _, _, cx| {
+                    this.lighting.openrgb_color = preset;
+                    this.apply_openrgb(cx);
+                },
+            )));
+        }
+        colours = colours.child(widgets::tiny_icon_button("icons/palette.svg").on_press(
+            cx.listener(move |this, _, _, cx| {
+                this.open_color_picker(ColorTarget::OpenRgb, this.lighting.openrgb_color, cx);
+            }),
+        ));
+
+        let brightness_weak = cx.entity().downgrade();
+        let brightness_commit = cx.entity().downgrade();
+        let speed_weak = cx.entity().downgrade();
+        let speed_commit = cx.entity().downgrade();
+
+        body = body.child(
+            widgets::card_padded()
+                .gap_5()
+                .child(
+                    div()
+                        .flex()
+                        .items_start()
+                        .justify_between()
+                        .child(
+                            div()
+                                .flex()
+                                .flex_col()
+                                .gap_1()
+                                .child(
+                                    div()
+                                        .text_size(px(18.))
+                                        .font_weight(FontWeight::SEMIBOLD)
+                                        .text_color(theme::text())
+                                        .child(device.name.clone()),
+                                )
+                                .child(widgets::hint(format!(
+                                    "{} · {} · {}",
+                                    device.kind,
+                                    device.description,
+                                    if device.location.is_empty() { "OpenRGB" } else { &device.location }
+                                ))),
+                        )
+                        .child(widgets::pill("OPENRGB", theme::info())),
+                )
+                .child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap_2()
+                        .child(widgets::section_label("MODE"))
+                        .child(mode_chips),
+                )
+                .child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap_2()
+                        .child(widgets::section_label("ZONE"))
+                        .child(zone_chips),
+                )
+                .child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap_2()
+                        .child(widgets::section_label("COLOUR"))
+                        .child(colours),
+                )
+                .child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap_2()
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .justify_between()
+                                .child(widgets::section_label("BRIGHTNESS"))
+                                .child(widgets::mono_value(format!("{:.0}%", self.lighting.openrgb_brightness))),
+                        )
+                        .child(widgets::slider_with_commit(
+                            self.lighting.openrgb_brightness,
+                            0.0,
+                            100.0,
+                            1.0,
+                            theme::accent(),
+                            move |value, _, cx| {
+                                let _ = brightness_weak.update(cx, |root, cx| {
+                                    root.lighting.openrgb_brightness = value;
+                                    cx.notify();
+                                });
+                            },
+                            move |_, _, cx| {
+                                let _ = brightness_commit.update(cx, |root, cx| root.apply_openrgb(cx));
+                            },
+                        )),
+                )
+                .child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap_2()
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .justify_between()
+                                .child(widgets::section_label("SPEED"))
+                                .child(widgets::mono_value(format!("{:.0}%", self.lighting.openrgb_speed))),
+                        )
+                        .child(widgets::slider_with_commit(
+                            self.lighting.openrgb_speed,
+                            0.0,
+                            100.0,
+                            1.0,
+                            theme::accent(),
+                            move |value, _, cx| {
+                                let _ = speed_weak.update(cx, |root, cx| {
+                                    root.lighting.openrgb_speed = value;
+                                    cx.notify();
+                                });
+                            },
+                            move |_, _, cx| {
+                                let _ = speed_commit.update(cx, |root, cx| root.apply_openrgb(cx));
+                            },
+                        )),
+                )
+                .child(widgets::hint(
+                    "OpenRGB and OpenRazer can control the same device. Prefer one backend at a time so the last write wins predictably.",
+                )),
+        );
+        body.into_any_element()
+    }
+
+    fn openrgb_selected_device(&self) -> Option<&OpenRgbDevice> {
+        let index = self.lighting.openrgb_selected?;
+        self.lighting
+            .openrgb_devices
+            .iter()
+            .find(|device| device.index == index)
     }
 
     fn software_effects_card(
