@@ -309,6 +309,7 @@ pub struct Root {
     pub audio_sources: Vec<AudioSource>,
     pub backups: Vec<BackupEntry>,
     pub software_active: HashMap<String, SoftwareEffect>,
+    last_device_ids: Vec<String>,
     pub toast: Option<Toast>,
     toast_seq: u64,
     _poll_task: gpui::Task<()>,
@@ -354,6 +355,7 @@ impl Root {
             audio_sources: Vec::new(),
             backups: Vec::new(),
             software_active: HashMap::new(),
+            last_device_ids: Vec::new(),
             toast: None,
             toast_seq: 0,
             _poll_task: cx.spawn(async |_this, _cx| {}),
@@ -504,7 +506,14 @@ impl Root {
     pub fn handle_event(&mut self, event: Event, cx: &mut Context<Self>) {
         match event {
             Event::Devices(devices) => {
+                let device_ids: Vec<String> =
+                    devices.iter().map(|device| device.id.clone()).collect();
+                let devices_changed = device_ids != self.last_device_ids;
                 self.devices = devices;
+                if devices_changed {
+                    self.last_device_ids = device_ids;
+                    self.reload_macro_engine();
+                }
                 let selected_exists = self
                     .selected
                     .as_ref()
