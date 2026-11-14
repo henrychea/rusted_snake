@@ -73,6 +73,12 @@ keyboard button remapping and OpenRazer's own macro recording are not part of th
 Devices that OpenRazer does not support (for example some Razer audio products) do not
 appear at all.
 
+OpenRGB is a separate stack. It has its own drivers and can list motherboards, DRAM and
+Razer products that OpenRazer does not manage. Rusted Snake talks only to OpenRazer, so
+those OpenRGB entries will not appear here. Check `openrazer-daemon` logs and
+`org.razer.supportedDevices` if a Razer device is missing; non-Razer devices such as ASUS
+motherboards are intentionally out of scope.
+
 ## Requirements
 
 - Linux with Wayland or X11 and a Vulkan-capable GPU (GPUI uses Vulkan).

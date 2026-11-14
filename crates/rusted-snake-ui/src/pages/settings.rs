@@ -68,7 +68,7 @@ impl Root {
                                 .gap_1()
                                 .child(widgets::heading("OpenRazer"))
                                 .child(widgets::hint(
-                                    "Rusted Snake talks to devices through the OpenRazer daemon. Device changes are applied live.",
+                                    "Only devices managed by openrazer-daemon appear. OpenRGB has its own drivers and may list more devices, including non-Razer hardware.",
                                 )),
                         )
                         .child(
