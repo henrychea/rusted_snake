@@ -1,0 +1,5 @@
+# Rusted Snake: raw HID access for reading and saving Razer onboard profiles.
+# Only the user logged in at the seat gets access. Install with:
+#   sudo cp linux/70-rusted-snake-hidraw.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload-rules && sudo udevadm trigger
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1532", TAG+="uaccess"

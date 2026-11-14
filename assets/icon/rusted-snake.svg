@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1c2024"/>
+      <stop offset="0.55" stop-color="#0d0f11"/>
+      <stop offset="1" stop-color="#060707"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8cff6a"/>
+      <stop offset="0.5" stop-color="#44d62c"/>
+      <stop offset="1" stop-color="#1f7a12"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="7"/>
+    </filter>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="54" fill="url(#bg)" stroke="#2e3339" stroke-width="2"/>
+  <path d="M128 42 L190 78 L190 178 L128 214 L66 178 L66 78 Z" fill="none" stroke="#44d62c" stroke-width="4" opacity="0.22" filter="url(#glow)"/>
+  <path d="M128 42 L190 78 L190 178 L128 214 L66 178 L66 78 Z" fill="none" stroke="url(#green)" stroke-width="5"/>
+  <path d="M148 88 C112 90 100 120 122 134 C140 146 158 152 146 170 C134 186 106 180 98 168"
+        fill="none" stroke="url(#green)" stroke-width="16" stroke-linecap="round"/>
+  <circle cx="128" cy="128" r="76" fill="#44d62c" opacity="0.06"/>
+</svg>

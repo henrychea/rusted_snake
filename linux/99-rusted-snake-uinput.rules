@@ -1,0 +1,9 @@
+# Rusted Snake: let the signed-in user run macros.
+# Macros need to read Razer input devices and create a virtual keyboard.
+# Install with:
+#   sudo cp linux/99-rusted-snake-uinput.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload-rules && sudo udevadm trigger
+# Then add yourself to the input group and sign in again:
+#   sudo usermod -aG input "$USER"
+KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"
+SUBSYSTEM=="input", ATTRS{idVendor}=="1532", TAG+="uaccess"

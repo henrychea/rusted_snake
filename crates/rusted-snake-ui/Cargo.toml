@@ -1,0 +1,18 @@
+[package]
+name = "rusted-snake-ui"
+description = "GPUI interface for Rusted Snake"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+rusted-snake-core = { path = "../rusted-snake-core" }
+rusted-snake-backend = { path = "../rusted-snake-backend" }
+gpui.workspace = true
+anyhow.workspace = true
+crossbeam-channel.workspace = true
+chrono.workspace = true
+log.workspace = true

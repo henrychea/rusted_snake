@@ -1,0 +1,62 @@
+#!/bin/sh
+# Rusted Snake launcher.
+#
+# Runs the release build from this checkout. Builds it on first run and when
+# the sources are newer than the binary. Fast-forwards from origin when the
+# checkout is a clean git repository.
+#
+# Log: ${XDG_CACHE_HOME:-~/.cache}/rusted-snake/launcher.log
+set -eu
+
+REPO="$(CDPATH= cd -- "$(dirname -- "$(readlink -f -- "$0")")/.." && pwd)"
+CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/rusted-snake"
+LOG="$CACHE/launcher.log"
+BIN="$REPO/target/release/rusted-snake"
+LOCK="${XDG_RUNTIME_DIR:-$CACHE}/rusted-snake.lock"
+
+mkdir -p "$CACHE"
+[ -f "$LOG" ] && tail -n 2000 "$LOG" >"$LOG.tmp" && mv "$LOG.tmp" "$LOG"
+
+log() {
+	echo "$(date '+%F %T') $*" >>"$LOG"
+}
+
+# One copy at a time. The lock is released when the app exits.
+exec 9>>"$LOCK"
+if ! flock -n 9; then
+	# Raise the existing window if the compositor lets us; otherwise just exit.
+	command -v wmctrl >/dev/null 2>&1 && wmctrl -a "Rusted Snake" 2>/dev/null || true
+	exit 0
+fi
+
+cd "$REPO"
+
+if [ -d .git ] && [ "${RUSTED_SNAKE_UPDATE:-1}" != 0 ]; then
+	if git diff --quiet && git diff --cached --quiet; then
+		if git fetch -q origin 2>>"$LOG"; then
+			UPSTREAM="$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || true)"
+			if [ -n "$UPSTREAM" ] && [ "$(git rev-list --count "HEAD..$UPSTREAM" 2>/dev/null || echo 0)" -gt 0 ]; then
+				log "updating from $UPSTREAM"
+				git merge -q --ff-only "$UPSTREAM" >>"$LOG" 2>&1 || log "update failed; running local checkout"
+			fi
+		fi
+	fi
+fi
+
+needs_build=0
+if [ ! -x "$BIN" ]; then
+	needs_build=1
+elif [ -n "$(find crates assets Cargo.toml Cargo.lock -newer "$BIN" -print -quit 2>/dev/null)" ]; then
+	needs_build=1
+fi
+
+if [ "$needs_build" = 1 ]; then
+	log "building Rusted Snake"
+	if ! cargo build --release -p rusted-snake >>"$LOG" 2>&1; then
+		command -v notify-send >/dev/null 2>&1 && notify-send -i "$REPO/assets/icon/rusted-snake.png" "Rusted Snake" "Build failed. See $LOG"
+		exit 1
+	fi
+fi
+
+log "starting Rusted Snake"
+exec "$BIN" "$@"

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Rusted Snake
+GenericName=Razer Device Settings
+Comment=Buttons, DPI, polling rate, lighting and macros for Razer devices
+Exec=rusted-snake
+Icon=rusted-snake
+Terminal=false
+Categories=Settings;HardwareSettings;
+Keywords=razer;mouse;keyboard;lighting;dpi;macros;openrazer;synapse;
+StartupNotify=true

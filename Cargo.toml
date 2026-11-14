@@ -1,0 +1,40 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/rusted-snake-core",
+    "crates/rusted-snake-backend",
+    "crates/rusted-snake-ui",
+    "crates/rusted-snake",
+]
+
+[workspace.package]
+version = "1.0.0"
+edition = "2024"
+rust-version = "1.90"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/henrychea/rusted_snake"
+authors = ["Henry Chea", "Brett Smith", "Snake contributors"]
+
+[workspace.dependencies]
+anyhow = "1.0"
+thiserror = "2.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+crossbeam-channel = "0.5"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+libc = "0.2"
+dbus = "0.9"
+gpui = "0.2.2"
+log = "0.4"
+env_logger = "0.11"
+
+[profile.dev.package."*"]
+opt-level = 2
+
+[patch.crates-io]
+xattr = { path = "vendor/xattr" }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 4

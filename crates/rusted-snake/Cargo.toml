@@ -1,0 +1,22 @@
+[package]
+name = "rusted-snake"
+description = "A Razer Synapse-style configurator for OpenRazer, written in Rust with GPUI"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "rusted-snake"
+path = "src/main.rs"
+
+[dependencies]
+rusted-snake-core = { path = "../rusted-snake-core" }
+rusted-snake-backend = { path = "../rusted-snake-backend" }
+rusted-snake-ui = { path = "../rusted-snake-ui" }
+gpui.workspace = true
+anyhow.workspace = true
+env_logger.workspace = true
+log.workspace = true
