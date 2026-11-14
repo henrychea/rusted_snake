@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::thread::sleep;
 use std::time::Duration;
 
-use anyhow::{Context, Result, anyhow, bail};
+use anyhow::{Context, Result, bail};
 
 const REPORT: usize = 91;
 
@@ -193,13 +193,4 @@ fn find_node(vid: u16, pid: u16) -> Result<Option<PathBuf>> {
         }
     }
     Ok(None)
-}
-
-pub fn device_available(vid: u16, pid: u16) -> bool {
-    find_node(vid, pid).ok().flatten().is_some()
-}
-
-#[allow(dead_code)]
-fn _unused() -> anyhow::Error {
-    anyhow!("unused")
 }

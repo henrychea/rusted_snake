@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, HashMap};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use gpui::prelude::*;
 use gpui::{
@@ -264,8 +264,6 @@ pub struct MacroEditor {
     pub key_modifiers: keymap::Modifiers,
     pub trigger: Option<u16>,
     pub repeat: RepeatMode,
-    pub capturing_key: bool,
-    pub capturing_trigger: bool,
 }
 
 #[derive(Default)]
@@ -275,7 +273,6 @@ pub struct MacroUi {
     pub confirm_delete_set: bool,
     pub confirm_delete_macro: Option<u64>,
     pub status: EngineStatus,
-    pub trigger_picker: Option<u64>,
 }
 
 #[derive(Default)]
@@ -289,7 +286,6 @@ pub struct SettingsUi {
 pub struct Toast {
     pub message: String,
     pub error: bool,
-    pub created: Instant,
 }
 
 pub struct Root {
@@ -965,8 +961,6 @@ impl Root {
                 .as_ref()
                 .map(|entry| entry.repeat)
                 .unwrap_or(RepeatMode::Once),
-            capturing_key: false,
-            capturing_trigger: false,
         };
         let (name, action) = match &entry {
             Some(entry) => (entry.name.clone(), entry.action.clone()),
@@ -1333,11 +1327,7 @@ impl Root {
     pub fn show_toast(&mut self, message: String, error: bool, cx: &mut Context<Self>) {
         self.toast_seq += 1;
         let seq = self.toast_seq;
-        self.toast = Some(Toast {
-            message,
-            error,
-            created: Instant::now(),
-        });
+        self.toast = Some(Toast { message, error });
         cx.spawn(async move |this, cx| {
             cx.background_executor().timer(Duration::from_secs(6)).await;
             let _ = this.update(cx, |root, cx| {

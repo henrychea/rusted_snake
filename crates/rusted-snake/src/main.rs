@@ -12,7 +12,7 @@ fn main() {
             "A Razer Synapse-style device configurator for OpenRazer, written in Rust with GPUI."
         );
         println!();
-        println!("Usage: rusted-snake [--version]");
+        println!("Usage: rusted-snake [--page devices|buttons|performance|lighting|macros|settings]");
         println!();
         println!("Settings and macros live in ~/.config/rusted-snake.");
         return;

@@ -3,8 +3,8 @@ use std::rc::Rc;
 
 use gpui::prelude::*;
 use gpui::{
-    AnyElement, BorderStyle, Bounds, CursorStyle, Div, ElementId, Hsla, MouseButton, Pixels,
-    SharedString, Window, canvas, div, point, px, quad, size, svg, transparent_black,
+    BorderStyle, Bounds, CursorStyle, Div, Hsla, MouseButton, Pixels, SharedString, Window, canvas,
+    div, point, px, quad, size, svg, transparent_black,
 };
 
 use crate::theme;
@@ -689,15 +689,6 @@ pub fn accent_bar() -> Div {
         .bg(theme::accent())
 }
 
-pub fn centered(element: impl IntoElement) -> AnyElement {
-    div()
-        .flex()
-        .items_center()
-        .justify_center()
-        .child(element)
-        .into_any_element()
-}
-
 pub fn spacer() -> Div {
     div().flex_1()
 }
@@ -708,8 +699,4 @@ pub fn mono_value(text: impl Into<SharedString>) -> Div {
         .text_size(px(12.))
         .text_color(theme::text())
         .child(text.into())
-}
-
-pub fn field_id(id: &'static str) -> ElementId {
-    ElementId::Name(id.into())
 }

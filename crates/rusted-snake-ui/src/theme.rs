@@ -91,15 +91,3 @@ pub fn with_alpha(hex: u32, alpha: f32) -> Hsla {
 pub fn from_rgb(color: rusted_snake_core::Rgb) -> Hsla {
     rgb(((color.r as u32) << 16) | ((color.g as u32) << 8) | color.b as u32).into()
 }
-
-pub fn to_rgb(color: Hsla) -> rusted_snake_core::Rgb {
-    let rgba = color.to_rgb();
-    let red = (rgba.r * 255.0).round() as u8;
-    let green = (rgba.g * 255.0).round() as u8;
-    let blue = (rgba.b * 255.0).round() as u8;
-    rusted_snake_core::Rgb::new(red, green, blue)
-}
-
-pub fn page_title() -> &'static str {
-    "Barlow"
-}

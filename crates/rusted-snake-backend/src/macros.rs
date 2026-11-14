@@ -10,7 +10,6 @@ use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
-use rusted_snake_core::keymap;
 use rusted_snake_core::keymap::{Modifiers, char_to_evdev};
 use rusted_snake_core::macros::{MacroAction, MacroDef, RepeatMode};
 
@@ -644,11 +643,6 @@ unsafe fn ioctl_arg(
     } else {
         Ok(())
     }
-}
-
-#[allow(dead_code)]
-fn _assert_keymap(_: &str) -> String {
-    keymap::hid_usage_name(0)
 }
 
 #[cfg(test)]

@@ -64,7 +64,7 @@ pub const SIDE_TRIGGERS: &[(u16, &str)] = &[
 ];
 
 pub fn hid_usage_name(usage: u8) -> String {
-    let name = match usage {
+    match usage {
         0x04..=0x1d => ((b'A' + (usage - 0x04)) as char).to_string(),
         0x1e..=0x27 => ((b'1' + (usage - 0x1e)) as char).to_string(),
         0x28 => "Enter".into(),
@@ -118,9 +118,8 @@ pub fn hid_usage_name(usage: u8) -> String {
         0xe5 => "Right Shift".into(),
         0xe6 => "Right Alt".into(),
         0xe7 => "Right Super".into(),
-        _ => return format!("Key {usage:02x}"),
-    };
-    name
+        _ => format!("Key {usage:02x}"),
+    }
 }
 
 fn hid_base(character: char) -> Option<(u8, bool)> {
@@ -334,13 +333,8 @@ pub fn key_to_evdev(key: &str) -> Option<u16> {
     Some(code)
 }
 
-/// GPUI key names for the side buttons, if the keyboard emits them.
-pub fn side_trigger_code(index: usize) -> Option<u16> {
-    SIDE_TRIGGERS.get(index).map(|(code, _)| *code)
-}
-
 pub fn evdev_name(code: u16) -> String {
-    let name = match code {
+    match code {
         1 => "Esc".into(),
         2..=10 => format!("{}", code - 1),
         11 => "0".into(),
@@ -420,9 +414,8 @@ pub fn evdev_name(code: u16) -> String {
         277 => "Forward click".into(),
         278 => "Back click".into(),
         279 => "Task click".into(),
-        _ => return format!("Key {code}"),
-    };
-    name
+        _ => format!("Key {code}"),
+    }
 }
 
 /// ASCII character to a Linux key code and whether Shift is needed.

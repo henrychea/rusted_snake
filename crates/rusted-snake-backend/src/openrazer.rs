@@ -1,12 +1,11 @@
-use std::collections::BTreeMap;
 use std::time::Duration;
 
 use anyhow::{Context, Result, anyhow};
 use dbus::blocking::Connection;
 use dbus::blocking::stdintf::org_freedesktop_dbus::Introspectable;
 use rusted_snake_core::{
-    BatteryInfo, DeviceKind, DeviceSnapshot, DpiInfo, EffectKind, OnboardCaps, Rgb, ZoneEffect,
-    ZoneId, ZoneSnapshot,
+    BatteryInfo, DeviceKind, DeviceSnapshot, DpiInfo, EffectKind, Rgb, ZoneEffect, ZoneId,
+    ZoneSnapshot,
 };
 
 const DEST: &str = "org.razer";
@@ -544,17 +543,6 @@ fn prettify(id: &str) -> String {
     }
     output
 }
-
-/// Devices that expose only a static colour are candidates for software animation.
-pub fn software_effect_available(device: &DeviceSnapshot) -> bool {
-    device.zones.iter().any(|zone| {
-        zone.supported.contains(&EffectKind::Static)
-            && !zone.supported.contains(&EffectKind::Spectrum)
-    })
-}
-
-#[allow(dead_code)]
-fn _assert_caps(_: BTreeMap<u8, String>, _: Option<OnboardCaps>) {}
 
 #[cfg(test)]
 mod tests {
