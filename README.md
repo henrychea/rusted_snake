@@ -36,6 +36,9 @@ designed to work with anything OpenRazer supports.
   profiles from Settings; backups are compatible with Snake's JSON format.
 - **Settings.** Experimental saving for untested mice, startup with the computer,
   raw-HID and macro permission instructions, daemon diagnostics.
+- **Tray icon.** A StatusNotifierItem tray icon with Show, page shortcuts and Quit. On X11,
+  closing the window keeps Rusted Snake in the tray; on Wayland it quits because GPUI cannot
+  restore a minimized window.
 - **Startup and updates.** `bin/rusted-snake` builds on first run, fast-forwards from git
   when the checkout is clean, and starts the release binary.
 
@@ -44,6 +47,10 @@ designed to work with anything OpenRazer supports.
 The custom colour picker uses hue, saturation and brightness with a live preview:
 
 ![Custom colour picker](images/color-picker.png)
+
+The tray icon uses the StatusNotifierItem protocol and offers page shortcuts and Quit:
+
+![Tray icon in the desktop panel](images/tray.png)
 
 ## Requirements
 
@@ -170,9 +177,11 @@ grab Razer input devices with evdev and inject through a uinput virtual keyboard
 
 ## Notes and limits
 
-- Rusted Snake is a normal window; there is no tray icon yet. Closing it stops live effects
-  and macros. Use the launcher's window activation, your desktop's task switcher, or the
-  app menu to reopen it.
+- The tray icon needs a StatusNotifier host (KDE Plasma, Cinnamon, or GNOME with the
+  AppIndicator extension). On Wayland, GPUI cannot unminimize a window from the tray, so
+  closing the window quits the app; the tray is available while the window is open. On X11,
+  closing minimizes to the tray and the tray's Show item restores it. Live effects and
+  macros stop when the app quits.
 - The audio effect applies colours to lighting zones. It does not draw a per-key matrix
   animation on keyboards.
 - Per-app macro lists and macro recording, which earlier Snake versions had, are not part

@@ -16,3 +16,5 @@ anyhow.workspace = true
 crossbeam-channel.workspace = true
 chrono.workspace = true
 log.workspace = true
+ksni = { version = "0.3.7", default-features = false, features = ["blocking", "async-io"] }
+image = { version = "0.25", default-features = false, features = ["png"] }

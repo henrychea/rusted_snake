@@ -1,10 +1,12 @@
 use std::collections::{BTreeMap, HashMap};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use gpui::prelude::*;
 use gpui::{
-    AnyElement, App, Context, CursorStyle, Div, FocusHandle, FontWeight, KeyDownEvent, MouseButton,
-    SharedString, Window, div, px,
+    AnyElement, AnyWindowHandle, App, Context, CursorStyle, Div, FocusHandle, FontWeight,
+    KeyDownEvent, MouseButton, SharedString, Window, div, px,
 };
 use rusted_snake_backend::{
     AudioSource, BackendHandle, BackendInfo, BackupEntry, Command, EngineState, EngineStatus, Event,
@@ -17,6 +19,7 @@ use rusted_snake_core::{
 };
 
 use crate::theme;
+use crate::tray::{self, TrayCommand, TrayRuntime};
 use crate::widgets::{self, OnPress};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -289,6 +292,9 @@ pub struct Toast {
 }
 
 pub struct Root {
+    pub window_handle: AnyWindowHandle,
+    pub allow_close: Arc<AtomicBool>,
+    pub tray: Option<TrayRuntime>,
     pub backend: BackendHandle,
     pub events: crossbeam_channel::Receiver<Event>,
     pub settings: Settings,
@@ -316,7 +322,12 @@ pub struct Root {
 }
 
 impl Root {
-    pub fn new(cx: &mut Context<Self>) -> Self {
+    pub fn new(
+        cx: &mut Context<Self>,
+        window_handle: AnyWindowHandle,
+        allow_close: Arc<AtomicBool>,
+        tray: Option<TrayRuntime>,
+    ) -> Self {
         let settings = Settings::load();
         let macros = MacroLibrary::load();
         let backend = BackendHandle::spawn(settings.clone());
@@ -330,7 +341,12 @@ impl Root {
             fields.insert(field, FieldState::default());
         }
         let capture_focus = cx.focus_handle();
+        let tray_commands = tray.as_ref().map(|tray| tray.commands.clone());
+        let task_allow_close = allow_close.clone();
         let mut root = Self {
+            window_handle,
+            allow_close,
+            tray,
             backend,
             events: events.clone(),
             settings,
@@ -372,6 +388,39 @@ impl Root {
                 cx.background_executor()
                     .timer(Duration::from_millis(120))
                     .await;
+                if let Some(commands) = &tray_commands {
+                    let mut tray_batch = Vec::new();
+                    while let Ok(command) = commands.try_recv() {
+                        tray_batch.push(command);
+                    }
+                    for command in tray_batch {
+                        match command {
+                            TrayCommand::Show => {
+                                let _ = window_handle.update(cx, |_, window, _| {
+                                    window.activate_window();
+                                    window.refresh();
+                                });
+                            }
+                            TrayCommand::Page(page) => {
+                                let _ = this.update(cx, |root, cx| {
+                                    root.page = page;
+                                    cx.notify();
+                                });
+                                let _ = window_handle.update(cx, |_, window, _| {
+                                    window.activate_window();
+                                    window.refresh();
+                                });
+                            }
+                            TrayCommand::Quit => {
+                                task_allow_close.store(true, Ordering::Relaxed);
+                                let _ =
+                                    window_handle.update(cx, |_, window, _| window.remove_window());
+                                let _ = cx.update(|app| app.quit());
+                                return;
+                            }
+                        }
+                    }
+                }
                 let mut batch = Vec::new();
                 while let Ok(event) = events.try_recv() {
                     batch.push(event);
@@ -2156,9 +2205,23 @@ pub fn open_page(cx: &mut App, page: Page) {
             app_id: Some("com.henrychea.RustedSnake".into()),
             ..Default::default()
         },
-        |_, cx| {
+        |window, cx| {
+            let allow_close = Arc::new(AtomicBool::new(false));
+            let tray = tray::start(allow_close.clone());
+            let tray_available = tray.is_some();
+            let keep_in_tray = tray_available && std::env::var_os("WAYLAND_DISPLAY").is_none();
+            let close_flag = allow_close.clone();
+            window.on_window_should_close(cx, move |window, _cx| {
+                if !keep_in_tray || close_flag.load(Ordering::Relaxed) {
+                    true
+                } else {
+                    window.minimize_window();
+                    false
+                }
+            });
+            let window_handle = window.window_handle();
             cx.new(|cx| {
-                let mut root = Root::new(cx);
+                let mut root = Root::new(cx, window_handle, allow_close, tray);
                 root.page = page;
                 root
             })

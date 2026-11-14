@@ -31,6 +31,8 @@ Razer Synapse-inspired dark interface.
   evdev and injects through a uinput virtual keyboard, then releases everything on exit.
 - Settings page with experimental onboarding writes, startup-with-the-computer, permission
   instructions, OpenRazer diagnostics and the about panel.
+- StatusNotifierItem tray icon with Show, page shortcuts and Quit. Closing to tray works on
+  X11; on Wayland closing quits because GPUI cannot restore minimized windows.
 - `bin/rusted-snake` launcher that builds on first run, fast-forwards from git when clean,
   and starts the release binary.
 - Ship udev rules for raw HID and uinput access, a desktop entry, and app icons.
@@ -39,8 +41,8 @@ Razer Synapse-inspired dark interface.
 ### Removed
 
 - Java, JavaFX, Maven, the old theme modules, the old images and the old launcher.
-- The tray icon and the in-app updater. The launcher handles updates; live effects and
-  macros run while the window is open.
+- The in-app updater. The launcher handles updates; live effects and macros run while the
+  window is open. The tray icon returns for devices with a StatusNotifier host.
 - Per-app macro lists, macro recording and the classic layout designer from older Snake
   versions.
 

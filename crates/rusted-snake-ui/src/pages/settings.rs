@@ -318,7 +318,7 @@ impl Root {
                                 .gap_1()
                                 .child(widgets::heading("Startup"))
                                 .child(widgets::hint(
-                                    "Open Rusted Snake when you sign in. Live effects and macros need the app to stay open.",
+                                    "Open Rusted Snake when you sign in. On X11 the window can also close to the tray, so effects and macros keep running.",
                                 )),
                         )
                         .child(
