@@ -84,6 +84,7 @@ pub enum Command {
     ReloadMacros(Vec<MacroDef>),
     ListOpenRgbDevices,
     ApplyOpenRgb(OpenRgbApply),
+    SetUiVisible(bool),
     Shutdown,
 }
 
@@ -156,6 +157,10 @@ impl BackendHandle {
     pub fn events(&self) -> &Receiver<Event> {
         &self.events
     }
+
+    pub fn shutdown(&self) {
+        let _ = self.commands.send(Command::Shutdown);
+    }
 }
 
 impl Drop for BackendHandle {
@@ -191,6 +196,7 @@ struct Backend {
     macro_engine: MacroEngine,
     last_macro_status: Option<EngineStatus>,
     audio_error: Option<String>,
+    ui_visible: bool,
 }
 
 impl Backend {
@@ -212,6 +218,7 @@ impl Backend {
             macro_engine,
             last_macro_status: None,
             audio_error: None,
+            ui_visible: true,
         }
     }
 
@@ -449,6 +456,18 @@ impl Backend {
             Command::ApplyOpenRgb(change) => {
                 let result = openrgb::apply(&change);
                 self.report(result, "OpenRGB lighting updated.".into());
+            }
+            Command::SetUiVisible(visible) => {
+                self.ui_visible = visible;
+                if visible {
+                    self.send_event(Event::Backend(BackendInfo {
+                        connected: self.client.is_some(),
+                        version: self.version.clone(),
+                        error: self.last_scan_error.clone(),
+                    }));
+                    self.last_macro_status = None;
+                    self.emit_macro_status();
+                }
             }
             Command::Shutdown => {}
         }
@@ -802,6 +821,9 @@ impl Backend {
     }
 
     fn send_event(&self, event: Event) {
+        if !self.ui_visible {
+            return;
+        }
         let _ = self.events.send(event);
     }
 }

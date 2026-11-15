@@ -1,12 +1,13 @@
 use std::collections::{BTreeMap, HashMap};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use gpui::prelude::*;
 use gpui::{
-    AnyElement, AnyWindowHandle, App, Context, CursorStyle, Div, FocusHandle, FontWeight,
-    KeyDownEvent, MouseButton, SharedString, Window, div, px,
+    AnyElement, App, AppContext, AsyncApp, Context, CursorStyle, Div, Entity, FocusHandle,
+    FontWeight, KeyDownEvent, MouseButton, Render, SharedString, Window, WindowHandle,
+    WindowOptions, div, px,
 };
 use rusted_snake_backend::{
     AudioSource, BackendHandle, BackendInfo, BackupEntry, Command, EngineState, EngineStatus,
@@ -310,12 +311,47 @@ pub struct Toast {
     pub error: bool,
 }
 
-pub struct Root {
-    pub window_handle: AnyWindowHandle,
-    pub allow_close: Arc<AtomicBool>,
-    pub close_to_tray: Arc<AtomicBool>,
+pub struct AppRuntime {
+    pub backend: Arc<BackendHandle>,
     pub tray: Option<TrayRuntime>,
-    pub backend: BackendHandle,
+    pub close_to_tray: Arc<AtomicBool>,
+    pub main: Mutex<Option<WindowHandle<Root>>>,
+    pub last_page: Mutex<Page>,
+    pub last_bounds: Mutex<gpui::Bounds<gpui::Pixels>>,
+    keepalive: Mutex<Option<WindowHandle<KeepAliveWindow>>>,
+}
+
+impl AppRuntime {
+    pub fn has_keepalive(&self) -> bool {
+        self.keepalive
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .is_some()
+    }
+
+    pub fn can_close_to_tray(&self) -> bool {
+        self.tray.is_some() && self.has_keepalive()
+    }
+
+    pub fn remember_page(&self, page: Page) {
+        *self
+            .last_page
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = page;
+    }
+}
+
+struct KeepAliveWindow;
+
+impl Render for KeepAliveWindow {
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        div().size_full()
+    }
+}
+
+pub struct Root {
+    pub runtime: Arc<AppRuntime>,
+    pub backend: Arc<BackendHandle>,
     pub events: crossbeam_channel::Receiver<Event>,
     pub settings: Settings,
     pub macros: MacroLibrary,
@@ -342,17 +378,10 @@ pub struct Root {
 }
 
 impl Root {
-    pub fn new(
-        cx: &mut Context<Self>,
-        window_handle: AnyWindowHandle,
-        allow_close: Arc<AtomicBool>,
-        close_to_tray: Arc<AtomicBool>,
-        tray: Option<TrayRuntime>,
-    ) -> Self {
+    pub fn new(cx: &mut Context<Self>, runtime: Arc<AppRuntime>) -> Self {
         let settings = Settings::load();
-        close_to_tray.store(settings.close_to_tray, Ordering::Relaxed);
         let macros = MacroLibrary::load();
-        let backend = BackendHandle::spawn(settings.clone());
+        let backend = runtime.backend.clone();
         let events = backend.events().clone();
         let mut field_focus = HashMap::new();
         for field in FieldId::ALL {
@@ -363,13 +392,8 @@ impl Root {
             fields.insert(field, FieldState::default());
         }
         let capture_focus = cx.focus_handle();
-        let tray_commands = tray.as_ref().map(|tray| tray.commands.clone());
-        let task_allow_close = allow_close.clone();
         let mut root = Self {
-            window_handle,
-            allow_close,
-            close_to_tray,
-            tray,
+            runtime,
             backend,
             events: events.clone(),
             settings,
@@ -402,6 +426,7 @@ impl Root {
         root.settings_ui.autostart = rusted_snake_core::settings::is_autostart_enabled();
         root.settings_ui.experimental = root.settings.experimental_onboard;
         root.lighting_brightness_from_settings();
+        root.backend.send(Command::SetUiVisible(true));
         root.reload_macro_engine();
         root.backend.send(Command::RefreshDevices);
         root.backend.send(Command::RefreshAudioSources);
@@ -411,39 +436,6 @@ impl Root {
                 cx.background_executor()
                     .timer(Duration::from_millis(120))
                     .await;
-                if let Some(commands) = &tray_commands {
-                    let mut tray_batch = Vec::new();
-                    while let Ok(command) = commands.try_recv() {
-                        tray_batch.push(command);
-                    }
-                    for command in tray_batch {
-                        match command {
-                            TrayCommand::Show => {
-                                let _ = window_handle.update(cx, |_, window, _| {
-                                    window.activate_window();
-                                    window.refresh();
-                                });
-                            }
-                            TrayCommand::Page(page) => {
-                                let _ = this.update(cx, |root, cx| {
-                                    root.page = page;
-                                    cx.notify();
-                                });
-                                let _ = window_handle.update(cx, |_, window, _| {
-                                    window.activate_window();
-                                    window.refresh();
-                                });
-                            }
-                            TrayCommand::Quit => {
-                                task_allow_close.store(true, Ordering::Relaxed);
-                                let _ =
-                                    window_handle.update(cx, |_, window, _| window.remove_window());
-                                let _ = cx.update(|app| app.quit());
-                                return;
-                            }
-                        }
-                    }
-                }
                 let mut batch = Vec::new();
                 while let Ok(event) = events.try_recv() {
                     batch.push(event);
@@ -476,6 +468,7 @@ impl Root {
 
     pub fn set_page(&mut self, page: Page, cx: &mut Context<Self>) {
         self.page = page;
+        self.runtime.remember_page(page);
         if page == Page::Buttons {
             self.request_onboard();
         }
@@ -485,6 +478,7 @@ impl Root {
     pub fn select_device(&mut self, id: String, cx: &mut Context<Self>) {
         if self.selected.as_deref() == Some(id.as_str()) {
             self.page = Page::Buttons;
+            self.runtime.remember_page(Page::Buttons);
             cx.notify();
             return;
         }
@@ -495,6 +489,7 @@ impl Root {
         self.performance = PerformanceUi::default();
         self.reset_lighting_device_state();
         self.page = Page::Buttons;
+        self.runtime.remember_page(Page::Buttons);
         self.request_onboard();
         if let Some(device) = self.devices.iter().find(|device| device.id == id).cloned() {
             self.init_device_ui(&device);
@@ -1010,16 +1005,16 @@ impl Root {
     }
 
     pub fn set_close_to_tray(&mut self, enabled: bool, cx: &mut Context<Self>) {
-        if self.tray.is_none() {
+        if !self.runtime.can_close_to_tray() {
             self.show_toast(
-                "No StatusNotifier tray host was found, so closing still quits.".into(),
+                "No usable StatusNotifier tray host was found, so closing still quits.".into(),
                 true,
                 cx,
             );
             return;
         }
         self.settings.close_to_tray = enabled;
-        self.close_to_tray.store(enabled, Ordering::Relaxed);
+        self.runtime.close_to_tray.store(enabled, Ordering::Relaxed);
         let _ = self.settings.save();
         self.show_toast(
             if enabled {
@@ -1624,6 +1619,7 @@ impl Root {
                         this.page = Page::ALL[index as usize - 1];
                         cx.notify();
                     } else if key == "q" {
+                        this.backend.shutdown();
                         cx.quit();
                     }
                 }
@@ -2361,50 +2357,218 @@ fn toast_element(toast: &Toast) -> AnyElement {
         .into_any_element()
 }
 
+trait OpenRootWindow: AppContext {
+    fn open_root_window<V: 'static + Render>(
+        &mut self,
+        options: WindowOptions,
+        build: impl FnOnce(&mut Window, &mut App) -> Entity<V>,
+    ) -> anyhow::Result<WindowHandle<V>>;
+}
+
+impl OpenRootWindow for App {
+    fn open_root_window<V: 'static + Render>(
+        &mut self,
+        options: WindowOptions,
+        build: impl FnOnce(&mut Window, &mut App) -> Entity<V>,
+    ) -> anyhow::Result<WindowHandle<V>> {
+        self.open_window(options, build)
+    }
+}
+
+impl OpenRootWindow for AsyncApp {
+    fn open_root_window<V: 'static + Render>(
+        &mut self,
+        options: WindowOptions,
+        build: impl FnOnce(&mut Window, &mut App) -> Entity<V>,
+    ) -> anyhow::Result<WindowHandle<V>> {
+        self.open_window(options, build)
+    }
+}
+
+fn main_window_options(bounds: gpui::Bounds<gpui::Pixels>) -> WindowOptions {
+    WindowOptions {
+        window_bounds: Some(gpui::WindowBounds::Windowed(bounds)),
+        window_min_size: Some(gpui::size(px(1040.), px(700.))),
+        titlebar: Some(gpui::TitlebarOptions {
+            title: Some("Rusted Snake".into()),
+            ..Default::default()
+        }),
+        app_id: Some("com.henrychea.RustedSnake".into()),
+        ..Default::default()
+    }
+}
+
+fn open_main_window<C: OpenRootWindow>(
+    cx: &mut C,
+    runtime: Arc<AppRuntime>,
+    page: Page,
+    bounds: gpui::Bounds<gpui::Pixels>,
+) -> anyhow::Result<WindowHandle<Root>> {
+    let close_runtime = runtime.clone();
+    let root_runtime = runtime.clone();
+    let handle = cx.open_root_window(main_window_options(bounds), move |window, cx| {
+        window.on_window_should_close(cx, move |window, cx| {
+            *close_runtime
+                .last_bounds
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner()) = window.bounds();
+            *close_runtime
+                .main
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner()) = None;
+            if close_runtime.close_to_tray.load(Ordering::Relaxed)
+                && close_runtime.can_close_to_tray()
+            {
+                // The main window is destroyed, so it leaves the taskbar. The
+                // 1x1 hidden window keeps GPUI's event loop alive.
+                close_runtime.backend.send(Command::SetUiVisible(false));
+                true
+            } else {
+                close_runtime.backend.shutdown();
+                cx.quit();
+                true
+            }
+        });
+        cx.new(move |cx| {
+            let mut root = Root::new(cx, root_runtime);
+            root.page = page;
+            root
+        })
+    })?;
+    *runtime
+        .main
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(handle);
+    runtime.remember_page(page);
+    Ok(handle)
+}
+
+fn open_keepalive(cx: &mut App) -> anyhow::Result<WindowHandle<KeepAliveWindow>> {
+    let bounds = gpui::Bounds {
+        origin: gpui::point(px(0.), px(0.)),
+        size: gpui::size(px(1.), px(1.)),
+    };
+    cx.open_window(
+        WindowOptions {
+            show: false,
+            focus: false,
+            is_resizable: false,
+            is_minimizable: false,
+            is_movable: false,
+            window_bounds: Some(gpui::WindowBounds::Windowed(bounds)),
+            app_id: Some("com.henrychea.RustedSnake.Background".into()),
+            titlebar: None,
+            ..Default::default()
+        },
+        |_, cx| cx.new(|_| KeepAliveWindow),
+    )
+}
+
+fn show_main_window<C: OpenRootWindow>(
+    cx: &mut C,
+    runtime: &Arc<AppRuntime>,
+    page: Option<Page>,
+) -> anyhow::Result<()> {
+    let existing = *runtime
+        .main
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    if let Some(handle) = existing {
+        let result = handle.update(cx, |root, window, cx| {
+            if let Some(page) = page {
+                root.set_page(page, cx);
+            }
+            window.activate_window();
+            window.refresh();
+        });
+        if result.is_ok() {
+            return Ok(());
+        }
+    }
+    let page = page.unwrap_or_else(|| {
+        *runtime
+            .last_page
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    });
+    let bounds = *runtime
+        .last_bounds
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let handle = open_main_window(cx, runtime.clone(), page, bounds)?;
+    let _ = handle.update(cx, |_, window, _| window.activate_window());
+    Ok(())
+}
+
+fn spawn_tray_task(cx: &mut App, runtime: Arc<AppRuntime>) {
+    let Some(commands) = runtime.tray.as_ref().map(|tray| tray.commands.clone()) else {
+        return;
+    };
+    cx.spawn(async move |cx| {
+        loop {
+            cx.background_executor()
+                .timer(Duration::from_millis(150))
+                .await;
+            let mut batch = Vec::new();
+            while let Ok(command) = commands.try_recv() {
+                batch.push(command);
+            }
+            for command in batch {
+                match command {
+                    TrayCommand::Show => {
+                        if let Err(error) = show_main_window(cx, &runtime, None) {
+                            log::error!("could not show main window: {error}");
+                        }
+                    }
+                    TrayCommand::Page(page) => {
+                        if let Err(error) = show_main_window(cx, &runtime, Some(page)) {
+                            log::error!("could not open page from tray: {error}");
+                        }
+                    }
+                    TrayCommand::Quit => {
+                        runtime.backend.shutdown();
+                        let _ = cx.update(|app| app.quit());
+                        return;
+                    }
+                }
+            }
+        }
+    })
+    .detach();
+}
+
 pub fn open(cx: &mut App) {
     open_page(cx, Page::Devices);
 }
 
 pub fn open_page(cx: &mut App, page: Page) {
+    let settings = Settings::load();
+    let backend = Arc::new(BackendHandle::spawn(settings.clone()));
+    let tray = tray::start();
     let bounds = gpui::Bounds::centered(None, gpui::size(px(1280.), px(820.)), cx);
-    cx.open_window(
-        gpui::WindowOptions {
-            window_bounds: Some(gpui::WindowBounds::Windowed(bounds)),
-            window_min_size: Some(gpui::size(px(1040.), px(700.))),
-            titlebar: Some(gpui::TitlebarOptions {
-                title: Some("Rusted Snake".into()),
-                ..Default::default()
-            }),
-            app_id: Some("com.henrychea.RustedSnake".into()),
-            ..Default::default()
-        },
-        |window, cx| {
-            let allow_close = Arc::new(AtomicBool::new(false));
-            let tray = tray::start(allow_close.clone());
-            let tray_available = tray.is_some();
-            let close_to_tray = Arc::new(AtomicBool::new(Settings::load().close_to_tray));
-            let close_flag = allow_close.clone();
-            let close_to_tray_setting = close_to_tray.clone();
-            window.on_window_should_close(cx, move |window, cx| {
-                if close_flag.load(Ordering::Relaxed) {
-                    return true;
-                }
-                if tray_available && close_to_tray_setting.load(Ordering::Relaxed) {
-                    window.minimize_window();
-                    false
-                } else {
-                    cx.quit();
-                    true
-                }
-            });
-            let window_handle = window.window_handle();
-            cx.new(|cx| {
-                let mut root = Root::new(cx, window_handle, allow_close, close_to_tray, tray);
-                root.page = page;
-                root
-            })
-        },
-    )
-    .expect("could not open the Rusted Snake window");
+    let runtime = Arc::new(AppRuntime {
+        backend,
+        tray,
+        close_to_tray: Arc::new(AtomicBool::new(settings.close_to_tray)),
+        main: Mutex::new(None),
+        last_page: Mutex::new(page),
+        last_bounds: Mutex::new(bounds),
+        keepalive: Mutex::new(None),
+    });
+    if runtime.tray.is_some() {
+        match open_keepalive(cx) {
+            Ok(handle) => {
+                *runtime
+                    .keepalive
+                    .lock()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(handle);
+            }
+            Err(error) => log::warn!("could not create background window: {error}"),
+        }
+    }
+    if let Err(error) = open_main_window(cx, runtime.clone(), page, bounds) {
+        log::error!("could not open Rusted Snake: {error}");
+    }
+    spawn_tray_task(cx, runtime);
     cx.activate(true);
 }

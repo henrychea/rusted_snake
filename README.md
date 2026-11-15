@@ -42,10 +42,9 @@ interfaces, so other supported devices work to the extent the daemon exposes tho
 - **Settings.** Experimental saving for untested mice, startup with the computer,
   raw-HID and macro permission instructions, daemon diagnostics.
 - **Tray icon and close-to-tray.** A StatusNotifierItem tray icon with Show, page shortcuts
-  and Quit. **Settings → Window → Close to tray** keeps Rusted Snake running when the window
-  is closed, so effects and macros continue. On Wayland, restore the minimised window from
-  the taskbar; GPUI cannot unminimise it from the tray menu. With the option off, closing
-  quits.
+  and Quit. **Settings → Window → Close to tray** hides the window from the taskbar and keeps
+  Rusted Snake running in the tray, so effects and macros continue. **Show** opens a fresh
+  window at your last page. With the option off, closing quits.
 - **Startup and updates.** `bin/rusted-snake` builds on first run, fast-forwards from git
   when the checkout is clean, and starts the release binary.
 
@@ -243,9 +242,9 @@ grab Razer input devices with evdev and inject through a uinput virtual keyboard
 
 - The tray icon needs a StatusNotifier host (KDE Plasma, Cinnamon, or GNOME with the
   AppIndicator extension). **Close to tray** is off by default; enable it in Settings →
-  Window. On X11, the tray's Show item restores the minimised window. On Wayland, restore
-  from the taskbar; GPUI cannot unminimise a window from the tray. Live effects and macros
-  stop when the app quits.
+  Window. When enabled, closing destroys the taskbar window but keeps the app and its
+  effects/macros alive in the tray; Show opens a new window. Live effects and macros stop
+  when the app quits.
 - The audio effect applies colours to lighting zones. It does not draw a per-key matrix
   animation on keyboards.
 - The OpenRGB tab is a command-line bridge, not an SDK client. It applies static controls

@@ -337,8 +337,7 @@ impl Root {
         );
 
         // Window / tray behavior
-        let tray_available = self.tray.is_some();
-        let wayland = std::env::var_os("WAYLAND_DISPLAY").is_some();
+        let tray_available = self.runtime.can_close_to_tray();
         let mut tray_switch = widgets::switch(self.settings.close_to_tray, theme::accent());
         if tray_available {
             tray_switch = tray_switch.on_press(cx.listener(|this, _, _, cx| {
@@ -363,7 +362,7 @@ impl Root {
                                 .gap_1()
                                 .child(widgets::heading("Window"))
                                 .child(widgets::hint(if tray_available {
-                                    "Close to tray keeps Rusted Snake running when the window is closed, so live effects and macros continue. Quit from the tray menu or press Ctrl+Q to exit."
+                                    "Close to tray hides the window from the taskbar and keeps Rusted Snake running in the tray, so live effects and macros continue. Use Show in the tray menu to reopen it."
                                 } else {
                                     "No StatusNotifier tray host was found. Closing the window will quit Rusted Snake."
                                 })),
@@ -373,17 +372,13 @@ impl Root {
                 .child(widgets::info_row(
                     "Close button",
                     if self.settings.close_to_tray && tray_available {
-                        "Minimise to tray"
+                        "Hide to tray"
                     } else {
                         "Quit Rusted Snake"
                     },
                 ))
                 .children(self.settings.close_to_tray.then(|| {
-                    widgets::hint(if wayland {
-                        "On Wayland the compositor must restore a minimised window from the taskbar; GPUI cannot unminimise it from the tray menu."
-                    } else {
-                        "Use Show in the tray menu to restore the window."
-                    })
+                    widgets::hint("Rusted Snake leaves the taskbar while hidden. Use Show in the tray menu to open the window again.")
                 })),
         );
 

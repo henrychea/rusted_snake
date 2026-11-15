@@ -1,9 +1,6 @@
 //! StatusNotifierItem tray icon. GPUI has no tray API, so this uses the
 //! freedesktop/KDE StatusNotifierItem protocol through ksni.
 
-use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
-
 use crossbeam_channel::{Receiver, Sender, unbounded};
 use ksni::Tray;
 use ksni::blocking::Handle;
@@ -110,7 +107,7 @@ impl Tray for AppTray {
 /// Start the tray icon. Returns `None` when the desktop has no StatusNotifier
 /// host; the window then closes normally instead of minimising to a tray that
 /// does not exist.
-pub fn start(_close_flag: Arc<AtomicBool>) -> Option<TrayRuntime> {
+pub fn start() -> Option<TrayRuntime> {
     let (sender, commands) = unbounded();
     let tray = AppTray {
         sender,
