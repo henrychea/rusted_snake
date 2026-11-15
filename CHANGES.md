@@ -39,6 +39,9 @@ Razer Synapse-inspired dark interface.
   with OpenRGB modes, zones, colours, brightness and speed for devices OpenRazer misses.
 - `bin/rusted-snake` launcher that builds on first run, fast-forwards from git when clean,
   and starts the release binary.
+- `install.sh` for user or system installs: release binary, desktop entry, hicolor icons,
+  optional udev rules, cache refresh and uninstall. The desktop entry uses the
+  `com.henrychea.RustedSnake` application ID.
 - Ship udev rules for raw HID and uinput access, a desktop entry, and app icons.
 - `--page` argument for opening a specific page.
 

@@ -123,17 +123,39 @@ The launcher logs to `${XDG_CACHE_HOME:-~/.cache}/rusted-snake/launcher.log`. Se
 `RUSTED_SNAKE_UPDATE=0` to skip the git update check. Pass `--page lighting` (or
 `devices`, `buttons`, `performance`, `macros`, `settings`) to open a page directly.
 
-### Desktop integration
+### Install for the desktop
+
+Use the installer:
 
 ```sh
-install -Dm755 target/release/rusted-snake ~/.local/bin/rusted-snake
-install -Dm644 linux/rusted-snake.desktop ~/.local/share/applications/rusted-snake.desktop
-install -Dm644 assets/icon/rusted-snake.svg ~/.local/share/icons/hicolor/scalable/apps/rusted-snake.svg
-install -Dm644 assets/icon/rusted-snake.png ~/.local/share/icons/hicolor/256x256/apps/rusted-snake.png
-update-desktop-database ~/.local/share/applications 2>/dev/null || true
+./install.sh
 ```
 
+It builds the release binary and installs:
+
+- `~/.local/bin/rusted-snake`
+- `~/.local/share/applications/com.henrychea.RustedSnake.desktop`
+- icons under `~/.local/share/icons/hicolor` (32–512 px and scalable)
+- desktop and icon caches
+
 Then start **Rusted Snake** from your app menu, or turn on **Startup** in Settings.
+
+Options:
+
+```sh
+./install.sh --system        # install to /usr/local using sudo when needed
+./install.sh --with-udev     # also install both udev rules
+./install.sh --no-build      # use the existing release binary
+./install.sh --uninstall     # remove the binary, entry and icons
+./install.sh --prefix=/opt   # install under a custom prefix
+```
+
+Settings, macros and profile backups in `~/.config/rusted-snake` and
+`~/.local/share/rusted-snake` are not touched by `--uninstall`.
+
+The desktop entry uses the application ID `com.henrychea.RustedSnake`, matching the
+Wayland app ID so panels group it correctly. The installer writes an absolute `Exec`
+path, so `~/.local/bin` does not need to be in `PATH`.
 
 ## Permissions
 
@@ -206,6 +228,7 @@ crates/
   rusted-snake           application entry point
 assets/                  Barlow fonts, mouse artwork, icons, app icon
 linux/                   udev rules and desktop entry
+install.sh               user/system installer
 vendor/xattr             upstream xattr 0.2.3 with a one-line libc fix (see its README)
 ```
 
