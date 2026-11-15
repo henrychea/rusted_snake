@@ -48,6 +48,8 @@ Razer Synapse-inspired dark interface.
   `com.henrychea.RustedSnake` application ID.
 - Ship udev rules for raw HID and uinput access, a desktop entry, and app icons.
 - `--page` argument for opening a specific page.
+- Static landing page in `site/` with self-hosted Geist and JetBrains Mono, real app
+  screenshots and the install guide. No build step or external runtime.
 
 ### Removed
 
