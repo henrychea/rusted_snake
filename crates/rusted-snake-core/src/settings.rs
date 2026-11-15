@@ -11,6 +11,8 @@ pub struct Settings {
     /// Allow writes to onboard profiles of models that have not been verified.
     pub experimental_onboard: bool,
     pub start_with_computer: bool,
+    /// Closing the window keeps the app running in the tray instead of quitting.
+    pub close_to_tray: bool,
     pub selected_device: Option<String>,
     /// Last side plate chosen for each mouse id.
     pub onboard_plate: BTreeMap<String, String>,

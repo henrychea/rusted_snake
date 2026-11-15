@@ -313,6 +313,7 @@ pub struct Toast {
 pub struct Root {
     pub window_handle: AnyWindowHandle,
     pub allow_close: Arc<AtomicBool>,
+    pub close_to_tray: Arc<AtomicBool>,
     pub tray: Option<TrayRuntime>,
     pub backend: BackendHandle,
     pub events: crossbeam_channel::Receiver<Event>,
@@ -345,9 +346,11 @@ impl Root {
         cx: &mut Context<Self>,
         window_handle: AnyWindowHandle,
         allow_close: Arc<AtomicBool>,
+        close_to_tray: Arc<AtomicBool>,
         tray: Option<TrayRuntime>,
     ) -> Self {
         let settings = Settings::load();
+        close_to_tray.store(settings.close_to_tray, Ordering::Relaxed);
         let macros = MacroLibrary::load();
         let backend = BackendHandle::spawn(settings.clone());
         let events = backend.events().clone();
@@ -365,6 +368,7 @@ impl Root {
         let mut root = Self {
             window_handle,
             allow_close,
+            close_to_tray,
             tray,
             backend,
             events: events.clone(),
@@ -1003,6 +1007,29 @@ impl Root {
             experimental: enabled,
         });
         cx.notify();
+    }
+
+    pub fn set_close_to_tray(&mut self, enabled: bool, cx: &mut Context<Self>) {
+        if self.tray.is_none() {
+            self.show_toast(
+                "No StatusNotifier tray host was found, so closing still quits.".into(),
+                true,
+                cx,
+            );
+            return;
+        }
+        self.settings.close_to_tray = enabled;
+        self.close_to_tray.store(enabled, Ordering::Relaxed);
+        let _ = self.settings.save();
+        self.show_toast(
+            if enabled {
+                "Closing the window will keep Rusted Snake running in the tray.".into()
+            } else {
+                "Closing the window will quit Rusted Snake.".into()
+            },
+            false,
+            cx,
+        );
     }
 
     pub fn set_autostart(&mut self, enabled: bool, cx: &mut Context<Self>) {
@@ -2355,19 +2382,24 @@ pub fn open_page(cx: &mut App, page: Page) {
             let allow_close = Arc::new(AtomicBool::new(false));
             let tray = tray::start(allow_close.clone());
             let tray_available = tray.is_some();
-            let keep_in_tray = tray_available && std::env::var_os("WAYLAND_DISPLAY").is_none();
+            let close_to_tray = Arc::new(AtomicBool::new(Settings::load().close_to_tray));
             let close_flag = allow_close.clone();
-            window.on_window_should_close(cx, move |window, _cx| {
-                if !keep_in_tray || close_flag.load(Ordering::Relaxed) {
-                    true
-                } else {
+            let close_to_tray_setting = close_to_tray.clone();
+            window.on_window_should_close(cx, move |window, cx| {
+                if close_flag.load(Ordering::Relaxed) {
+                    return true;
+                }
+                if tray_available && close_to_tray_setting.load(Ordering::Relaxed) {
                     window.minimize_window();
                     false
+                } else {
+                    cx.quit();
+                    true
                 }
             });
             let window_handle = window.window_handle();
             cx.new(|cx| {
-                let mut root = Root::new(cx, window_handle, allow_close, tray);
+                let mut root = Root::new(cx, window_handle, allow_close, close_to_tray, tray);
                 root.page = page;
                 root
             })

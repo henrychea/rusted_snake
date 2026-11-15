@@ -41,9 +41,11 @@ interfaces, so other supported devices work to the extent the daemon exposes tho
   profiles from Settings; backups are compatible with Snake's JSON format.
 - **Settings.** Experimental saving for untested mice, startup with the computer,
   raw-HID and macro permission instructions, daemon diagnostics.
-- **Tray icon.** A StatusNotifierItem tray icon with Show, page shortcuts and Quit. On X11,
-  closing the window keeps Rusted Snake in the tray; on Wayland it quits because GPUI cannot
-  restore a minimized window.
+- **Tray icon and close-to-tray.** A StatusNotifierItem tray icon with Show, page shortcuts
+  and Quit. **Settings → Window → Close to tray** keeps Rusted Snake running when the window
+  is closed, so effects and macros continue. On Wayland, restore the minimised window from
+  the taskbar; GPUI cannot unminimise it from the tray menu. With the option off, closing
+  quits.
 - **Startup and updates.** `bin/rusted-snake` builds on first run, fast-forwards from git
   when the checkout is clean, and starts the release binary.
 
@@ -199,8 +201,8 @@ macros.
   profile's own colours. Save onboard lighting with the button at the bottom.
 - **Macros** manages macro sets. A macro is a trigger plus an action: press a key, type
   text, or run a shell command. Repeat modes are Once, while held, and toggle.
-- **Settings** has the experimental-write switch, backups/restore, startup, access
-  instructions, OpenRazer diagnostics and the about panel.
+- **Settings** has the experimental-write switch, backups/restore, startup, close-to-tray,
+  access instructions, OpenRazer diagnostics and the about panel.
 - **Keyboard:** Ctrl+1…6 switch pages, F11 toggles full screen, Esc closes an editor or
   colour dialog, and Ctrl+Q quits.
 
@@ -240,10 +242,10 @@ grab Razer input devices with evdev and inject through a uinput virtual keyboard
 ## Notes and limits
 
 - The tray icon needs a StatusNotifier host (KDE Plasma, Cinnamon, or GNOME with the
-  AppIndicator extension). On Wayland, GPUI cannot unminimize a window from the tray, so
-  closing the window quits the app; the tray is available while the window is open. On X11,
-  closing minimizes to the tray and the tray's Show item restores it. Live effects and
-  macros stop when the app quits.
+  AppIndicator extension). **Close to tray** is off by default; enable it in Settings →
+  Window. On X11, the tray's Show item restores the minimised window. On Wayland, restore
+  from the taskbar; GPUI cannot unminimise a window from the tray. Live effects and macros
+  stop when the app quits.
 - The audio effect applies colours to lighting zones. It does not draw a per-key matrix
   animation on keyboards.
 - The OpenRGB tab is a command-line bridge, not an SDK client. It applies static controls

@@ -318,7 +318,7 @@ impl Root {
                                 .gap_1()
                                 .child(widgets::heading("Startup"))
                                 .child(widgets::hint(
-                                    "Open Rusted Snake when you sign in. On X11 the window can also close to the tray, so effects and macros keep running.",
+                                    "Open Rusted Snake when you sign in, so live effects and macros can start with your session.",
                                 )),
                         )
                         .child(
@@ -334,6 +334,57 @@ impl Root {
                     "Autostart entry",
                     rusted_snake_core::paths::autostart_file().display().to_string(),
                 )),
+        );
+
+        // Window / tray behavior
+        let tray_available = self.tray.is_some();
+        let wayland = std::env::var_os("WAYLAND_DISPLAY").is_some();
+        let mut tray_switch = widgets::switch(self.settings.close_to_tray, theme::accent());
+        if tray_available {
+            tray_switch = tray_switch.on_press(cx.listener(|this, _, _, cx| {
+                let enabled = !this.settings.close_to_tray;
+                this.set_close_to_tray(enabled, cx);
+            }));
+        } else {
+            tray_switch = tray_switch.opacity(0.45);
+        }
+        page = page.child(
+            widgets::card_padded()
+                .gap_4()
+                .child(
+                    div()
+                        .flex()
+                        .items_start()
+                        .justify_between()
+                        .child(
+                            div()
+                                .flex()
+                                .flex_col()
+                                .gap_1()
+                                .child(widgets::heading("Window"))
+                                .child(widgets::hint(if tray_available {
+                                    "Close to tray keeps Rusted Snake running when the window is closed, so live effects and macros continue. Quit from the tray menu or press Ctrl+Q to exit."
+                                } else {
+                                    "No StatusNotifier tray host was found. Closing the window will quit Rusted Snake."
+                                })),
+                        )
+                        .child(tray_switch),
+                )
+                .child(widgets::info_row(
+                    "Close button",
+                    if self.settings.close_to_tray && tray_available {
+                        "Minimise to tray"
+                    } else {
+                        "Quit Rusted Snake"
+                    },
+                ))
+                .children(self.settings.close_to_tray.then(|| {
+                    widgets::hint(if wayland {
+                        "On Wayland the compositor must restore a minimised window from the taskbar; GPUI cannot unminimise it from the tray menu."
+                    } else {
+                        "Use Show in the tray menu to restore the window."
+                    })
+                })),
         );
 
         // Macro engine access

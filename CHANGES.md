@@ -33,8 +33,10 @@ Razer Synapse-inspired dark interface.
   evdev and injects through a uinput virtual keyboard, then releases everything on exit.
 - Settings page with experimental onboarding writes, startup-with-the-computer, permission
   instructions, OpenRazer diagnostics and the about panel.
-- StatusNotifierItem tray icon with Show, page shortcuts and Quit. Closing to tray works on
-  X11; on Wayland closing quits because GPUI cannot restore minimized windows.
+- StatusNotifierItem tray icon with Show, page shortcuts and Quit.
+- **Close to tray** setting (Settings → Window). When enabled, closing minimises the window
+  and keeps effects and macros running. On X11 the tray restores it; on Wayland restore from
+  the taskbar. When disabled, closing quits.
 - Tabbed lighting sources: OpenRazer and an OpenRGB tab driven by the `openrgb` command,
   with OpenRGB modes, zones, colours, brightness and speed for devices OpenRazer misses.
 - `bin/rusted-snake` launcher that builds on first run, fast-forwards from git when clean,
