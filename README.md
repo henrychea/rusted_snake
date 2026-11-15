@@ -230,13 +230,18 @@ crates/
 assets/                  Barlow fonts, mouse artwork, icons, app icon
 linux/                   udev rules and desktop entry
 install.sh               user/system installer
+vendor/gpui              GPUI 0.2.2 with a Linux event-loop patch so the app can live
+                         in the tray with no visible window (see its README)
 vendor/xattr             upstream xattr 0.2.3 with a one-line libc fix (see its README)
 ```
 
 The backend owns a thread with a blocking DBus connection and a command/event channel.
-The GPUI entity polls events on a timer, so device calls never block rendering. Software
-effects run in the backend at 20 fps and write static colours through OpenRazer. Macros
-grab Razer input devices with evdev and inject through a uinput virtual keyboard.
+The backend and tray service live in an app-level runtime, so they survive the window
+being hidden. The GPUI entity polls events on a timer, so device calls never block
+rendering. Software effects run in the backend at 20 fps and write static colours through
+OpenRazer. Macros grab Razer input devices with evdev and inject through a uinput virtual
+keyboard. The vendored GPUI patch removes the Linux event loop's automatic stop when the
+window list becomes empty; explicit quit still stops it.
 
 ## Notes and limits
 

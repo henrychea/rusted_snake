@@ -318,19 +318,11 @@ pub struct AppRuntime {
     pub main: Mutex<Option<WindowHandle<Root>>>,
     pub last_page: Mutex<Page>,
     pub last_bounds: Mutex<gpui::Bounds<gpui::Pixels>>,
-    keepalive: Mutex<Option<WindowHandle<KeepAliveWindow>>>,
 }
 
 impl AppRuntime {
-    pub fn has_keepalive(&self) -> bool {
-        self.keepalive
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .is_some()
-    }
-
     pub fn can_close_to_tray(&self) -> bool {
-        self.tray.is_some() && self.has_keepalive()
+        self.tray.is_some()
     }
 
     pub fn remember_page(&self, page: Page) {
@@ -338,14 +330,6 @@ impl AppRuntime {
             .last_page
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner()) = page;
-    }
-}
-
-struct KeepAliveWindow;
-
-impl Render for KeepAliveWindow {
-    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
-        div().size_full()
     }
 }
 
@@ -2443,27 +2427,6 @@ fn open_main_window<C: OpenRootWindow>(
     Ok(handle)
 }
 
-fn open_keepalive(cx: &mut App) -> anyhow::Result<WindowHandle<KeepAliveWindow>> {
-    let bounds = gpui::Bounds {
-        origin: gpui::point(px(0.), px(0.)),
-        size: gpui::size(px(1.), px(1.)),
-    };
-    cx.open_window(
-        WindowOptions {
-            show: false,
-            focus: false,
-            is_resizable: false,
-            is_minimizable: false,
-            is_movable: false,
-            window_bounds: Some(gpui::WindowBounds::Windowed(bounds)),
-            app_id: Some("com.henrychea.RustedSnake.Background".into()),
-            titlebar: None,
-            ..Default::default()
-        },
-        |_, cx| cx.new(|_| KeepAliveWindow),
-    )
-}
-
 fn show_main_window<C: OpenRootWindow>(
     cx: &mut C,
     runtime: &Arc<AppRuntime>,
@@ -2553,19 +2516,7 @@ pub fn open_page(cx: &mut App, page: Page) {
         main: Mutex::new(None),
         last_page: Mutex::new(page),
         last_bounds: Mutex::new(bounds),
-        keepalive: Mutex::new(None),
     });
-    if runtime.tray.is_some() {
-        match open_keepalive(cx) {
-            Ok(handle) => {
-                *runtime
-                    .keepalive
-                    .lock()
-                    .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(handle);
-            }
-            Err(error) => log::warn!("could not create background window: {error}"),
-        }
-    }
     if let Err(error) = open_main_window(cx, runtime.clone(), page, bounds) {
         log::error!("could not open Rusted Snake: {error}");
     }

@@ -34,9 +34,11 @@ Razer Synapse-inspired dark interface.
 - Settings page with experimental onboarding writes, startup-with-the-computer, permission
   instructions, OpenRazer diagnostics and the about panel.
 - StatusNotifierItem tray icon with Show, page shortcuts and Quit.
-- **Close to tray** setting (Settings → Window). When enabled, closing hides the window from
-  the taskbar while the app and its effects/macros stay alive in the tray. Show opens a new
-  window at the last page. When disabled, closing quits.
+- **Close to tray** setting (Settings → Window). When enabled, closing removes the window
+  from the taskbar and window switcher while the app and its effects/macros stay alive in
+  the tray. Show opens a new window at the last page. When disabled, closing quits.
+  The GPUI Linux event loop is vendored with a small patch so it can stay alive with no
+  windows; this removes the 1x1 background window that previously appeared in switchers.
 - Tabbed lighting sources: OpenRazer and an OpenRGB tab driven by the `openrgb` command,
   with OpenRGB modes, zones, colours, brightness and speed for devices OpenRazer misses.
 - `bin/rusted-snake` launcher that builds on first run, fast-forwards from git when clean,

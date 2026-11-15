@@ -31,7 +31,10 @@ env_logger = "0.11"
 [profile.dev.package."*"]
 opt-level = 2
 
+# Keep the GPUI event loop alive when the last window is hidden to the tray.
+# See vendor/gpui/README.rusted-snake.md.
 [patch.crates-io]
+gpui = { path = "vendor/gpui" }
 xattr = { path = "vendor/xattr" }
 
 [profile.release]
