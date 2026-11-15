@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" fill="none">
+  <defs>
+    <linearGradient id="neonGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00FF66"/>
+      <stop offset="100%" stop-color="#00E700"/>
+    </linearGradient>
+    <linearGradient id="cyberBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00FF66" stop-opacity="0.9"/>
+      <stop offset="50%" stop-color="#00882B" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#00FF66" stop-opacity="0.8"/>
+    </linearGradient>
+    <radialGradient id="bgGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00FF66" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+  
+  <!-- Subtle dark backplate -->
+  <rect width="240" height="240" rx="32" fill="#0A0D0C"/>
+  <circle cx="120" cy="120" r="100" fill="url(#bgGlow)"/>
+  
+  <!-- Outer Hexagonal Chassis -->
+  <polygon points="120,24 200,68 200,172 120,216 40,172 40,68" stroke="url(#cyberBorder)" stroke-width="4" stroke-linejoin="round" fill="#111614"/>
+  
+  <!-- Inner tech accent notches -->
+  <polygon points="120,38 186,76 186,164 120,202 54,164 54,76" stroke="#00FF66" stroke-opacity="0.25" stroke-width="1.5" fill="none" stroke-dasharray="8 6"/>
+
+  <!-- Stylized Cybernetic Serpent 'S' Body with Viper Head & Razor Edges -->
+  <g filter="url(#glow)">
+    <!-- Serpent Top Arc & Head -->
+    <path d="M148 74 L102 74 C86 74 76 84 76 98 C76 112 88 120 106 123 L134 128 C152 131 164 140 164 154 C164 170 150 180 132 180 L84 180" stroke="url(#neonGlow)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Cybernetic Scale Overlays & Segments -->
+    <path d="M152 68 L170 74 L156 86 Z" fill="#00FF66"/>
+    <!-- Snake Eye -->
+    <circle cx="160" cy="74" r="2.5" fill="#0A0D0C"/>
+    
+    <!-- Tail Segment -->
+    <polygon points="76,180 70,188 78,194 88,180" fill="#00FF66"/>
+  </g>
+  
+  <!-- Accent Tech Crosshairs -->
+  <circle cx="120" cy="24" r="3" fill="#00FF66"/>
+  <circle cx="120" cy="216" r="3" fill="#00FF66"/>
+</svg>
