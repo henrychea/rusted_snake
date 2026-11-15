@@ -50,6 +50,8 @@ Razer Synapse-inspired dark interface.
 - `--page` argument for opening a specific page.
 - Static landing page in `site/` with self-hosted Geist and JetBrains Mono, real app
   screenshots and the install guide. No build step or external runtime.
+- GitHub Pages workflow that publishes the landing page from `site/` on every push to
+  `main`.
 
 ### Removed
 
