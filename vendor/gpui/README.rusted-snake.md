@@ -11,3 +11,5 @@ The patch removes that automatic stop in:
 - `src/platform/linux/x11/client.rs`
 
 `Platform::quit()` still stops the loop, so explicit quit (tray menu or Ctrl+Q) works.
+
+The patch is Copyright © 2026 Henry Chea and is distributed under the GPUI crate's Apache-2.0 license.

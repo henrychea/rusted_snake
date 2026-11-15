@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-only
+# Copyright (C) 2026 Henry Chea
 # Install Rusted Snake for the current user, or system-wide with --system.
 #
 #   ./install.sh                 # ~/.local

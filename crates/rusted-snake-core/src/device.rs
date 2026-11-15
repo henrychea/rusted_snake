@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Henry Chea
+
 use serde::{Deserialize, Serialize};
 
 use crate::effect::EffectKind;

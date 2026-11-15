@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Henry Chea
+
 //! OpenRGB fallback for devices that OpenRazer does not manage.
 //!
 //! This uses the `openrgb` command line (which itself can talk to a local

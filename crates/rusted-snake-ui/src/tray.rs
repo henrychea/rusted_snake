@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Henry Chea
+
 //! StatusNotifierItem tray icon. GPUI has no tray API, so this uses the
 //! freedesktop/KDE StatusNotifierItem protocol through ksni.
 

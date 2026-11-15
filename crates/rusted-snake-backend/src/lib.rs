@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Henry Chea
+
 //! OpenRazer DBus, raw HID and OpenRGB fallback access for Rusted Snake.
 
 pub mod audio;

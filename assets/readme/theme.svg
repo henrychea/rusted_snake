@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="190" viewBox="0 0 1400 190">
+  <!-- Copyright (C) 2026 Henry Chea. SPDX-License-Identifier: GPL-3.0-only -->
+  <rect width="1400" height="190" rx="24" fill="#0b0c0e"/>
+  <g font-family="Noto Sans, DejaVu Sans, sans-serif">
+    <text x="42" y="42" fill="#9ba3ab" font-size="15" font-weight="600" letter-spacing="4">SYNAPSE-INSPIRED PALETTE</text>
+    <g transform="translate(42 66)">
+      <rect width="236" height="88" rx="14" fill="#44d62c"/>
+      <text x="20" y="36" fill="#071006" font-size="16" font-weight="700">RAZER GREEN</text>
+      <text x="20" y="62" fill="#071006" font-size="18" font-family="DejaVu Sans Mono, monospace">#44D62C</text>
+    </g>
+    <g transform="translate(296 66)">
+      <rect width="236" height="88" rx="14" fill="#141619" stroke="#262a30"/>
+      <text x="20" y="36" fill="#f1f4f2" font-size="16" font-weight="700">SURFACE</text>
+      <text x="20" y="62" fill="#9ba3ab" font-size="18" font-family="DejaVu Sans Mono, monospace">#141619</text>
+    </g>
+    <g transform="translate(550 66)">
+      <rect width="236" height="88" rx="14" fill="#0e0f12" stroke="#262a30"/>
+      <text x="20" y="36" fill="#f1f4f2" font-size="16" font-weight="700">CHROME</text>
+      <text x="20" y="62" fill="#9ba3ab" font-size="18" font-family="DejaVu Sans Mono, monospace">#0E0F12</text>
+    </g>
+    <g transform="translate(804 66)">
+      <rect width="236" height="88" rx="14" fill="#1f2328" stroke="#363b43"/>
+      <text x="20" y="36" fill="#f1f4f2" font-size="16" font-weight="700">RAISED</text>
+      <text x="20" y="62" fill="#9ba3ab" font-size="18" font-family="DejaVu Sans Mono, monospace">#1F2328</text>
+    </g>
+    <g transform="translate(1058 66)">
+      <rect width="300" height="88" rx="14" fill="#0b0c0e" stroke="#262a30"/>
+      <text x="20" y="36" fill="#f1f4f2" font-size="16" font-weight="700">BORDER / TEXT</text>
+      <text x="20" y="62" fill="#9ba3ab" font-size="18" font-family="DejaVu Sans Mono, monospace">#262A30 / #F1F4F2</text>
+    </g>
+  </g>
+</svg>

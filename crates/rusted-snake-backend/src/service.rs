@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Henry Chea
+
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::thread::{self, JoinHandle};

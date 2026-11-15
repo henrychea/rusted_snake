@@ -1,111 +1,122 @@
-# Rusted Snake
+<div align="center">
+  <img src="images/banner.png" alt="Rusted Snake — a Razer Synapse-style device configurator for Linux, written in Rust with GPUI" width="100%">
+</div>
 
-A modern Linux configurator for Razer devices, rewritten from scratch in Rust with
-[GPUI](https://gpui.rs). It talks to devices through [OpenRazer](https://openrazer.github.io/)
-and to the mouse's own memory over raw HID.
+<h1 align="center">RUSTED SNAKE</h1>
 
-This is a fork of [Snake by Brett Smith](https://github.com/bithatch/snake), continuing
-the work of [ScoobyDouche/snake](https://github.com/ScoobyDouche/snake), reimplemented as
-a native Rust application. It targets OpenRazer 3.12 and a Razer Naga Trinity for the
-onboard-profile path. Lighting, sensor and battery controls follow each device's OpenRazer
-interfaces, so other supported devices work to the extent the daemon exposes those controls.
+<p align="center">
+  <strong>Razer Synapse energy. Linux soul. Native Rust + GPUI.</strong><br>
+  Configure Razer hardware through OpenRazer — or reach past it with OpenRGB.
+</p>
 
-![Devices page](images/page-devices.png)
+<p align="center">
+  <a href="https://github.com/henrychea/rusted_snake"><img alt="Linux" src="https://img.shields.io/badge/LINUX-NATIVE-44D62C?style=for-the-badge&logo=linux&logoColor=white&labelColor=0B0C0E"></a>
+  <a href="https://www.rust-lang.org/"><img alt="Rust 1.90+" src="https://img.shields.io/badge/RUST-1.90%2B-44D62C?style=for-the-badge&logo=rust&logoColor=white&labelColor=0B0C0E"></a>
+  <a href="https://gpui.rs/"><img alt="GPUI 0.2.2" src="https://img.shields.io/badge/GPUI-0.2.2-44D62C?style=for-the-badge&labelColor=0B0C0E"></a>
+  <a href="https://openrazer.github.io/"><img alt="OpenRazer 3.12" src="https://img.shields.io/badge/OPENRAZER-3.12-44D62C?style=for-the-badge&labelColor=0B0C0E"></a>
+  <a href="LICENSE"><img alt="GPL-3.0" src="https://img.shields.io/badge/LICENSE-GPL--3.0-44D62C?style=for-the-badge&labelColor=0B0C0E"></a>
+  <a href="https://github.com/henrychea/rusted_snake/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/henrychea/rusted_snake?style=for-the-badge&color=44D62C&labelColor=0B0C0E&logo=github&logoColor=white"></a>
+</p>
 
-## What it does
+<p align="center">
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#install">Install</a> ·
+  <a href="#device-support">Device support</a> ·
+  <a href="#screenshots">Screenshots</a> ·
+  <a href="#how-it-works">How it works</a> ·
+  <a href="#copyright--license">License</a>
+</p>
 
-- **One window, built with GPUI.** A dark Razer Synapse-style interface: a device rail,
-  live status, cards, chips and neon-green accents. Everything is drawn by GPUI; there is
-  no web view, Java or Electron.
-- **Devices.** Live device discovery through OpenRazer with model, firmware, serial,
-  battery, DPI, polling rate and lighting status.
-- **Buttons and onboard profiles.** Read, edit and save the mouse's own profiles: which
-  button does what (key, mouse button, DPI up/down, next profile or off), side plate
-  selection for the Naga Trinity, and per-profile lighting. Profiles keep working on any
-  computer without Rusted Snake.
-- **Performance.** DPI stages stored on the mouse, or a live DPI slider and polling-rate
-  control through OpenRazer for devices without onboard profiles.
-- **Lighting.** Overall and per-zone brightness, static colours, spectrum, breath,
-  reactive, wave, starlight, pulsate, ripple and the other effects your device exposes.
-  A custom HSV colour picker and quick swatches are included.
-- **OpenRGB tab.** Switch the Lighting page between OpenRazer and OpenRGB. The OpenRGB
-  view lists motherboards, RAM, speakers and Razer devices that OpenRazer does not manage,
-  with modes, zones, colours, brightness and speed. It uses the `openrgb` command, so no
-  extra library is linked.
-- **Software effects.** Spectrum, breath and audio-reactive effects for devices that only
-  accept static colours. Audio follows your choice of PipeWire/PulseAudio source; the
-  default follows what is playing.
-- **Macros.** Per-device macros that press a key, type text or run a command, grouped in
-  sets. They run while Rusted Snake is open and are triggered by the side buttons.
-- **Backups.** Every profile is backed up before the first write. Back up and restore all
-  profiles from Settings; backups are compatible with Snake's JSON format.
-- **Settings.** Experimental saving for untested mice, startup with the computer,
-  raw-HID and macro permission instructions, daemon diagnostics.
-- **Tray icon and close-to-tray.** A StatusNotifierItem tray icon with Show, page shortcuts
-  and Quit. **Settings → Window → Close to tray** hides the window from the taskbar and keeps
-  Rusted Snake running in the tray, so effects and macros continue. **Show** opens a fresh
-  window at your last page. With the option off, closing quits.
-- **Startup and updates.** `bin/rusted-snake` builds on first run, fast-forwards from git
-  when the checkout is clean, and starts the release binary.
+---
 
-![Lighting page](images/page-lighting.png)
+## ▍ Why Rusted Snake
 
-The custom colour picker uses hue, saturation and brightness with a live preview:
+Razer's hardware is great. Its software story on Linux is not. Rusted Snake is a native
+configurator that feels like a modern Synapse window without the web runtime, the account,
+the cloud, or the Java.
 
-![Custom colour picker](images/color-picker.png)
+- **One GPU-accelerated window.** Everything is GPUI: layout, painting, sliders, colour
+  picker, hover states, tray-driven window recreation.
+- **OpenRazer first.** Live devices, lighting zones, DPI, polling rate, battery, onboard
+  profiles, backups and macros.
+- **OpenRGB when OpenRazer cannot see it.** A second Lighting tab controls motherboards,
+  DRAM, speakers and the Razer devices OpenRazer misses.
+- **Your settings stay yours.** No telemetry, no account, no network calls. Local JSON
+  settings and macros; profiles live in the mouse.
+- **One process, no ghost windows.** Close to tray destroys the window and keeps effects and
+  macros alive in the tray, Bitwarden-style.
 
-The tray icon uses the StatusNotifierItem protocol and offers page shortcuts and Quit:
+## ▍ The theme
 
-![Tray icon in the desktop panel](images/tray.png)
+<div align="center">
+  <img src="images/theme-palette.png" alt="Rusted Snake palette: Razer Green #44D62C, surface #141619, chrome #0E0F12, raised #1F2328, border #262A30, text #F1F4F2" width="100%">
+</div>
 
-OpenRGB lighting for devices OpenRazer does not manage:
+Razor-sharp charcoal, neon green, quiet borders, and generous spacing. The goal is a
+**Synapse-inspired Linux application**, not a skin on top of a web page: Barlow type,
+custom-drawn mouse art, per-zone lighting cards, a device rail, and a green accent used like
+a signal — never wallpaper.
 
-![OpenRGB lighting tab](images/page-lighting-openrgb.png)
+- **Razer Green** `#44D62C` — active states, sliders, status, focus.
+- **Chrome** `#0E0F12`, **surface** `#141619`, **raised** `#1F2328`.
+- **Borders** `#262A30`, **text** `#F1F4F2`, **muted** `#9BA3AB`.
+- Rounded 8–14 px surfaces, 1 px borders, soft glow on the logo and selected zones.
 
-## Device support
+<a id="screenshots"></a>
+## ▍ Screenshots
 
-OpenRazer is the source of truth. Rusted Snake lists every device returned by
-`org.razer.getDevices` and builds its controls from the interfaces and methods found by
-introspection. Coverage therefore depends on the device and driver:
+<table>
+  <tr>
+    <td width="50%" align="center"><img src="images/page-devices.png" alt="Devices page"><br><sub><strong>Devices</strong> — live OpenRazer inventory</sub></td>
+    <td width="50%" align="center"><img src="images/page-lighting.png" alt="Lighting page"><br><sub><strong>Lighting</strong> — zones, effects, brightness</sub></td>
+  </tr>
+  <tr>
+    <td width="50%" align="center"><img src="images/page-lighting-openrgb.png" alt="OpenRGB lighting tab"><br><sub><strong>OpenRGB</strong> — hardware OpenRazer misses</sub></td>
+    <td width="50%" align="center"><img src="images/page-macros.png" alt="Macros page"><br><sub><strong>Macros</strong> — key, text, command</sub></td>
+  </tr>
+  <tr>
+    <td width="50%" align="center"><img src="images/page-settings.png" alt="Settings page"><br><sub><strong>Settings</strong> — access, backups, tray</sub></td>
+    <td width="50%" align="center"><img src="images/color-picker.png" alt="Custom HSV colour picker"><br><sub><strong>Colour picker</strong> — hue / saturation / value</sub></td>
+  </tr>
+</table>
 
-| Feature | Coverage |
-| --- | --- |
-| Device list, name, firmware, serial, battery | Any device where OpenRazer exposes `razer.device.misc` / `razer.device.power` |
-| Brightness and lighting | `chroma`, `logo`, `scroll`, `left`, `right`, `backlight` and legacy `bw2013` zones. Per-zone method prefixes (`setLogoStatic`, `setScrollSpectrum`, ...) are handled. Effects appear only when the daemon exposes the setter |
-| DPI and polling rate | Devices exposing `razer.device.dpi` / `razer.device.misc` poll-rate methods. Polling choices are fixed at 125, 500, 1000, 2000, 4000 and 8000 Hz |
-| Onboard buttons and profiles | Raw HID. Verified on the Naga Trinity (1532:0067); other Razer mice are probed read-only and need Experimental saving for writes. Keyboards' onboard profiles are not handled |
-| Macros | Any Razer evdev keyboard or mouse; the trigger editor lists Naga side buttons plus arbitrary key capture. Broadly tested only with a mouse |
-| Audio-reactive lighting | Devices with at least one static-capable lighting zone; colours apply per zone, not per key |
-| OpenRGB lighting tab | Any controller the `openrgb` command lists, including non-Razer hardware; modes, zones, colours, brightness and speed only |
+## ▍ Feature set
 
-OpenRazer's `razer.device.binding` and `razer.device.macro` interfaces are not used, so
-keyboard button remapping and OpenRazer's own macro recording are not part of this rewrite.
-Devices that OpenRazer does not support (for example some Razer audio products) do not
-appear at all.
+<table>
+  <tr>
+    <td width="50%"><strong>Devices</strong><br>Live OpenRazer discovery with model, firmware, serial, VID:PID, battery, DPI, polling rate and lighting status.</td>
+    <td width="50%"><strong>Buttons</strong><br>Onboard profile slots, Naga side plates, clickable mouse markers, and a button editor that writes to the mouse and reads the result back.</td>
+  </tr>
+  <tr>
+    <td><strong>Performance</strong><br>Onboard DPI stages with an active stage, or a live DPI and polling-rate control through OpenRazer.</td>
+    <td><strong>Lighting</strong><br>Overall and per-zone brightness, static, spectrum, breath, reactive, wave, starlight, pulsate, ripple, plus a custom HSV picker.</td>
+  </tr>
+  <tr>
+    <td><strong>Live effects</strong><br>Software spectrum, breath and audio-reactive lighting for devices that only accept static colours. Runs while Rusted Snake is running, including when hidden to tray.</td>
+    <td><strong>Macros</strong><br>Per-device macro sets: press a key, type text or run a command. Once, while held, or toggle. Triggered through evdev and injected through uinput.</td>
+  </tr>
+  <tr>
+    <td><strong>OpenRGB</strong><br>Switch the Lighting page to OpenRGB for boards, RAM, speakers and Razer gear that OpenRazer does not manage. Modes, zones, colours, brightness, speed.</td>
+    <td><strong>Tray</strong><br>StatusNotifierItem with Show, page shortcuts and Quit. Close to tray removes the window from the taskbar and window switcher; Show rebuilds it.</td>
+  </tr>
+</table>
 
-OpenRGB is a separate stack with its own drivers. Rusted Snake's **Lighting → OpenRGB** tab
-uses the `openrgb` command to expose OpenRGB devices that OpenRazer does not manage, including
-motherboards, DRAM and Razer devices missing from `openrazer-daemon`. OpenRGB control is
-limited to lighting: device discovery, onboard profiles, DPI, polling rate and macros still
-come from OpenRazer. If a Razer device is missing from both, check `openrazer-daemon` logs,
-`org.razer.supportedDevices`, and OpenRGB's own device support.
+<a id="quick-start"></a>
+## ▍ Quick start
 
-## Requirements
+**Requirements**
 
-- Linux with Wayland or X11 and a Vulkan-capable GPU (GPUI uses Vulkan).
-- [OpenRazer](https://openrazer.github.io/) installed with `openrazer-daemon` running and
-  your user in the `openrazer` group.
-- Rust 1.90 or newer, with `cargo`.
-- Build dependencies for GPUI:
+- Linux with Wayland or X11 and a Vulkan-capable GPU.
+- [OpenRazer](https://openrazer.github.io/) with `openrazer-daemon` running and your user in
+  the `openrazer` group.
+- Rust 1.90+ with Cargo.
+- GPUI build dependencies:
   - Arch: `base-devel clang pkgconf wayland libxkbcommon vulkan-icd-loader vulkan-headers fontconfig freetype2`
   - Debian/Ubuntu: `build-essential clang pkg-config libwayland-dev libxkbcommon-dev libvulkan-dev libfontconfig1-dev libfreetype6-dev libx11-dev libxcb1-dev`
-- PipeWire or PulseAudio for the Audio lighting effect (`parec`, `pactl`). On Debian/Ubuntu install `pulseaudio-utils`; on Arch `libpulse` provides `parec`.
-- Optional: [OpenRGB](https://openrgb.org/) for the OpenRGB lighting tab. The `openrgb`
+- PipeWire or PulseAudio for the audio effect (`parec`, `pactl`). On Arch, `libpulse`
+  provides `parec`; on Debian/Ubuntu install `pulseaudio-utils`.
+- Optional: [OpenRGB](https://openrgb.org/) for the OpenRGB lighting tab; the `openrgb`
   command must be on `PATH`.
-- For onboard profiles: access to the mouse's raw HID node (udev rule below).
-- For macros: read access to Razer input devices and access to `/dev/uinput`.
-
-## Build and run
 
 ```sh
 git clone https://github.com/henrychea/rusted_snake.git ~/rusted_snake
@@ -114,65 +125,51 @@ cargo build --release -p rusted-snake
 ./target/release/rusted-snake
 ```
 
-Or let the launcher build and run it:
+Or let the launcher build, update from git, and run:
 
 ```sh
 ~/rusted_snake/bin/rusted-snake
 ```
 
 The launcher logs to `${XDG_CACHE_HOME:-~/.cache}/rusted-snake/launcher.log`. Set
-`RUSTED_SNAKE_UPDATE=0` to skip the git update check. Pass `--page lighting` (or
-`devices`, `buttons`, `performance`, `macros`, `settings`) to open a page directly.
+`RUSTED_SNAKE_UPDATE=0` to skip the git check. `--page lighting` opens a page directly.
 
-### Install for the desktop
+<a id="install"></a>
+## ▍ Install
 
-Use the installer:
+The desktop installer builds the release binary and installs the app menu entry, icons and
+optional permissions:
 
 ```sh
-./install.sh
+cd ~/rusted_snake
+./install.sh                 # ~/.local
+./install.sh --system        # /usr/local (sudo when needed)
+./install.sh --with-udev     # add raw-HID and uinput rules
+./install.sh --no-build      # install the existing release binary
+./install.sh --uninstall     # remove binary, entry and icons
+./install.sh --prefix=/opt   # custom prefix
 ```
 
-It builds the release binary and installs:
+Installed paths:
 
 - `~/.local/bin/rusted-snake`
 - `~/.local/share/applications/com.henrychea.RustedSnake.desktop`
-- icons under `~/.local/share/icons/hicolor` (32–512 px and scalable)
-- desktop and icon caches
+- `~/.local/share/icons/hicolor/{32x32,48x48,64x64,128x128,256x256,512x512,scalable}/apps/rusted-snake.*`
 
-Then start **Rusted Snake** from your app menu, or turn on **Startup** in Settings.
+The desktop entry uses the same application ID as the Wayland window
+(`com.henrychea.RustedSnake`) and an absolute `Exec` path, so panel grouping works and
+`~/.local/bin` does not need to be in `PATH`.
 
-Options:
+### Permissions
 
-```sh
-./install.sh --system        # install to /usr/local using sudo when needed
-./install.sh --with-udev     # also install both udev rules
-./install.sh --no-build      # use the existing release binary
-./install.sh --uninstall     # remove the binary, entry and icons
-./install.sh --prefix=/opt   # install under a custom prefix
-```
-
-Settings, macros and profile backups in `~/.config/rusted-snake` and
-`~/.local/share/rusted-snake` are not touched by `--uninstall`.
-
-The desktop entry uses the application ID `com.henrychea.RustedSnake`, matching the
-Wayland app ID so panels group it correctly. The installer writes an absolute `Exec`
-path, so `~/.local/bin` does not need to be in `PATH`.
-
-## Permissions
-
-### Onboard profiles (raw HID)
-
-Savings button maps, DPI stages and lighting to the mouse needs raw HID access:
+**Onboard profiles (raw HID)**
 
 ```sh
 sudo cp linux/70-rusted-snake-hidraw.rules /etc/udev/rules.d/
 sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
 
-The rule grants the signed-in seat user access to Razer hidraw nodes. Unplug and replug
-the mouse if the node already existed.
-
-### Macros (input devices and uinput)
+**Macros (input devices and uinput)**
 
 ```sh
 sudo cp linux/99-rusted-snake-uinput.rules /etc/udev/rules.d/
@@ -180,93 +177,94 @@ sudo udevadm control --reload-rules && sudo udevadm trigger
 sudo usermod -aG input "$USER"
 ```
 
-Sign out and back in after changing groups. Rusted Snake only grabs Razer input devices
-when at least one macro exists, and forwards normal input through a virtual keyboard, so
-the mouse and keyboard keep working. Closing the app releases the devices and stops the
-macros.
+Sign out and back in after changing groups. Unplug and replug a mouse if its hidraw node
+already existed before the rule was installed. `./install.sh --with-udev` does the rule
+installation for you.
 
-## Using Rusted Snake
+<a id="device-support"></a>
+## ▍ Device support
 
-- **Devices** lists what OpenRazer sees. Pick a device, then open Buttons, Performance or
-  Lighting.
-- **Buttons** reads the profiles stored in the mouse. Pick a profile slot and side plate,
-  click a numbered marker or button card, choose what it should do and save it to the
-  mouse. Left click is intentionally not editable.
-- **Performance** edits the DPI stages for the selected onboard profile, or the live
-  sensor/polling rate through OpenRazer. Polling rate changes are applied immediately.
-- **Lighting** controls brightness and each zone's hardware effect. The custom colour
-  dialog has hue, saturation and value sliders, a hex readout and presets. **Live effects**
-  animate the device while Rusted Snake is open; **Saved lighting** returns to the
-  profile's own colours. Save onboard lighting with the button at the bottom.
-- **Macros** manages macro sets. A macro is a trigger plus an action: press a key, type
-  text, or run a shell command. Repeat modes are Once, while held, and toggle.
-- **Settings** has the experimental-write switch, backups/restore, startup, close-to-tray,
-  access instructions, OpenRazer diagnostics and the about panel.
-- **Keyboard:** Ctrl+1…6 switch pages, F11 toggles full screen, Esc closes an editor or
-  colour dialog, and Ctrl+Q quits.
+OpenRazer is the source of truth for discovery. Rusted Snake lists every device returned by
+`org.razer.getDevices` and builds controls from the interfaces and methods found by
+introspection.
 
-![Macros page](images/page-macros.png)
+| Feature | Coverage |
+| --- | --- |
+| Device list, name, firmware, serial, battery | Any device exposing `razer.device.misc` / `razer.device.power` |
+| Brightness and lighting | `chroma`, `logo`, `scroll`, `left`, `right`, `backlight` and legacy `bw2013` zones. Prefixed setters (`setLogoStatic`, `setScrollSpectrum`, …) are handled. Effects appear only when the daemon exposes them |
+| DPI and polling | `razer.device.dpi` and poll-rate methods. Polling choices: 125, 500, 1000, 2000, 4000, 8000 Hz |
+| Onboard buttons and profiles | Raw HID. Naga Trinity (1532:0067) is verified; other Razer mice are probed read-only and need Experimental saving. Keyboard onboard profiles are not handled |
+| Macros | Any Razer evdev keyboard or mouse; trigger list defaults to Naga side buttons plus key capture. Broadly tested with a mouse |
+| Audio-reactive lighting | At least one static-capable zone; colours are per-zone, not per-key |
+| OpenRGB tab | Any controller the `openrgb` command lists, including non-Razer hardware; lighting modes/zones/colour/brightness/speed only |
 
-## Profiles and backups
+OpenRazer's `razer.device.binding` and `razer.device.macro` interfaces are not used, so
+keyboard button remapping and OpenRazer's macro recording are not part of this rewrite.
+OpenRGB is a separate stack with its own drivers; the **Lighting → OpenRGB** tab invokes the
+`openrgb` CLI and does not link its client library. Other pages remain OpenRazer-only.
 
-Mice with onboard memory keep button maps, DPI stages and lighting per profile. Slot 0 is
-the live state; slots 1..5 are stored profiles. Rusted Snake reads and writes the same
-format as Synapse for supported models.
+<a id="how-it-works"></a>
+## ▍ How it works
 
-Before the first write to a mouse, Rusted Snake saves every profile to
-`${XDG_DATA_HOME:-~/.local/share}/rusted-snake/backups/`. The same folder is used by
-**Back up now** and the restore list in Settings. Saving to untested models stays off
-unless **Experimental saving** is enabled; only the Naga Trinity is verified.
-
-## Architecture
-
-```
+```text
 crates/
   rusted-snake-core      domain model, settings, macros, onboard backup format, key maps
-  rusted-snake-backend   OpenRazer DBus client, raw HID protocol, worker service,
-                         software lighting engine, audio capture, evdev/uinput macros
-  rusted-snake-ui        GPUI theme, widgets and pages
+  rusted-snake-backend   OpenRazer DBus, raw HID protocol, worker service,
+                         software lighting, audio capture, evdev/uinput macros,
+                         OpenRGB command bridge
+  rusted-snake-ui        GPUI theme, widgets, pages, tray and window runtime
   rusted-snake           application entry point
-assets/                  Barlow fonts, mouse artwork, icons, app icon
+assets/                  Barlow fonts, mouse art, icons, README artwork
 linux/                   udev rules and desktop entry
 install.sh               user/system installer
-vendor/gpui              GPUI 0.2.2 with a Linux event-loop patch so the app can live
-                         in the tray with no visible window (see its README)
-vendor/xattr             upstream xattr 0.2.3 with a one-line libc fix (see its README)
+vendor/gpui              GPUI 0.2.2 with a Linux tray event-loop patch
+vendor/xattr             xattr 0.2.3 with a libc compatibility patch
 ```
 
-The backend owns a thread with a blocking DBus connection and a command/event channel.
-The backend and tray service live in an app-level runtime, so they survive the window
-being hidden. The GPUI entity polls events on a timer, so device calls never block
-rendering. Software effects run in the backend at 20 fps and write static colours through
-OpenRazer. Macros grab Razer input devices with evdev and inject through a uinput virtual
-keyboard. The vendored GPUI patch removes the Linux event loop's automatic stop when the
-window list becomes empty; explicit quit still stops it.
+The backend and tray service live in an app-level runtime. Closing to tray destroys the
+visible window, pauses UI events, and keeps effects and macros running; the tray task
+recreates the window on demand. The vendored GPUI patch keeps the Linux event loop alive
+with zero windows and still stops on explicit Quit. Software effects run at 20 fps and write
+static colours through OpenRazer. Macros grab Razer input devices and inject through uinput.
 
-## Notes and limits
+## ▍ Notes and limits
 
-- The tray icon needs a StatusNotifier host (KDE Plasma, Cinnamon, or GNOME with the
-  AppIndicator extension). **Close to tray** is off by default; enable it in Settings →
-  Window. When enabled, closing destroys the taskbar window but keeps the app and its
-  effects/macros alive in the tray; Show opens a new window. Live effects and macros stop
-  when the app quits.
-- The audio effect applies colours to lighting zones. It does not draw a per-key matrix
-  animation on keyboards.
-- The OpenRGB tab is a command-line bridge, not an SDK client. It applies static controls
-  rather than the live software effects available in the OpenRazer tab, and the `openrgb`
-  command adds roughly a second of latency per change.
-- Per-app macro lists and macro recording, which earlier Snake versions had, are not part
-  of this rewrite.
-- The in-app updater is replaced by the launcher's git fast-forward. Updates are not
-  installed from inside the window.
-- Onboard writes are verified and read back. Unknown models use read-only probing until
-  Experimental saving is explicitly enabled.
+- **Close to tray** is opt-in (Settings → Window) and needs a StatusNotifier host: KDE
+  Plasma, Cinnamon, or GNOME with AppIndicator. With it enabled, the window leaves the
+  taskbar and switcher; `Show` rebuilds it at the last page. With it off, closing quits.
+- Tray Quit or **Ctrl+Q** exits completely.
+- No tray icon where no StatusNotifier host exists.
+- No in-app updater. `bin/rusted-snake` fast-forwards from git and rebuilds; the installed
+  binary does not update itself.
+- The OpenRGB tab is a command-line bridge, not an SDK client. Each change costs roughly a
+  second and it applies static controls, not live software effects.
+- Audio lighting is per-zone, not a per-key matrix animation.
+- Per-app macro lists, macro recording and the old layout designer are not part of this
+  rewrite.
+- Unsaved window state (a macro draft, an open colour picker) is lost when the window is
+  hidden and rebuilt; saved settings, macros and profiles persist.
 
-## License
+<a id="copyright--license"></a>
+## ▍ Copyright & license
 
-GNU General Public License v3.0, like the original Snake. See [LICENSE](LICENSE).
+Rusted Snake is **free software** under the **GNU General Public License v3.0**.
+See [LICENSE](LICENSE) and the full attribution list in [NOTICE.md](NOTICE.md).
 
-Original Snake copyright Brett Smith and contributors. Rusted Snake is maintained by
-Henry Chea. Razer, Naga and Synapse are trademarks of Razer Inc.; this project is not
-affiliated with Razer. The bundled Barlow fonts are under the SIL Open Font License (see
-`assets/fonts/OFL.txt`). GPUI is licensed under Apache-2.0 by Zed Industries.
+| Work | Copyright | License |
+| --- | --- | --- |
+| Rusted Snake rewrite, UI, artwork | © 2026 Henry Chea | GPL-3.0-only |
+| Snake (original) | © 2020–2021 Brett Smith and contributors | GPL-3.0 |
+| ScoobyDouche/snake (Linux fork) | © 2026 ScoobyDouche and contributors | GPL-3.0 |
+| GPUI 0.2.2 | © Zed Industries and contributors | Apache-2.0 |
+| Barlow fonts | © 2017 The Barlow Project Authors | SIL OFL 1.1 |
+| xattr 0.2.3 | © Steven Allen | MIT OR Apache-2.0 |
+| ksni | © iovxw | Unlicense |
+
+OpenRazer, OpenRGB and PipeWire/PulseAudio are external programs with their own authors and
+licenses. Their code is not bundled.
+
+Razer, Razer Synapse, Razer Chroma, Naga and related marks are trademarks or registered
+trademarks of Razer Inc. This is an independent community project and is **not affiliated
+with, endorsed by, or sponsored by Razer Inc.**
+
+<p align="center"><sub>Built with Rust + GPUI · no account · no telemetry · no Synapse required</sub></p>

@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-only
+# Copyright (C) 2026 Henry Chea
 # Rusted Snake launcher.
 #
 # Runs the release build from this checkout. Builds it on first run and when

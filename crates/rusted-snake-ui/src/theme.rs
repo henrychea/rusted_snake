@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Henry Chea
+
 use gpui::{Background, Hsla, linear_color_stop, linear_gradient, rgb, rgba};
 
 pub const ACCENT: u32 = 0x44d62c;

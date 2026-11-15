@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Henry Chea
+
 //! Shared domain model for Rusted Snake.
 
 pub mod color;

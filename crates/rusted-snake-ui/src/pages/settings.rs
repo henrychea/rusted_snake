@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Henry Chea
+
 use gpui::prelude::*;
 use gpui::{AnyElement, Context, FontWeight, Window, div, px};
 
